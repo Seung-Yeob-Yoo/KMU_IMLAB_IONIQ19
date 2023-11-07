@@ -55,4 +55,5 @@ if __name__ == '__main__':
     vehicle = 'NE'
     can_db_path=os.path.join(os.path.dirname(__file__), 'dbc', '230518_NE1_2021_FD_C_v2.dbc')
     can_msg = ['VCU_AccPedDepVal']
-    print(Can_parser(vehicle=vehicle, can_db_path=can_db_path, can_data_name=can_msg).get_can_data())
+    for i in Can_parser(vehicle=vehicle, can_db_path=can_db_path, can_data_name=can_msg).get_can_data():
+        print(i)
