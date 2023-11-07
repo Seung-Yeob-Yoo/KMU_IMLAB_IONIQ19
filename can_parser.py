@@ -5,6 +5,7 @@ import cantools
 
 class Can_parser:
     def __init__(self, vehicle, can_db_path, can_data_name):
+        os.system("sudo ip link set can0 up type can bitrate 500000")
         self.vehicle = vehicle
         self.can_msg_list={'IONIQ19':['HEV_PC4', 'SAS11', 'ESP12'], # KMU
         'NE':['VCU_01_10ms', 'IEB_01_10ms', 'SAS_01_10ms', 'IMU_01_10ms'], # HMC NE
@@ -35,25 +36,26 @@ class Can_parser:
             for msg in self.db_msg:
                 if can_msg.arbitration_id == msg.frame_id:
                     can_dict = self.C_db.decode_message(can_msg.arbitration_id, can_msg.data)
-                    can_dict = {k: v for k, v in can_dict.items() if k in self.can_data_name[vehicle]}
+                    print(self.can_data_name)
+                    can_dict = {k: v for k, v in can_dict.items() if k in self.can_data_name}
 
                     for k, v in can_dict.items():
-                        can_data_dict[k] = v
+                        self.can_data_dict[k] = v
             
-            if 'not' in str(can_data_dict[self.can_data_name[vehicle][0]]):
-                can_data_dict[self.can_data_name[vehicle][0]] = 0.0
-            elif 'fully' in str(can_data_dict[self.can_data_name[vehicle][0]]):
-                can_data_dict[self.can_data_name[vehicle][0]] = 100.0
+            if 'not' in str(self.can_data_dict[self.can_data_name[0]]):
+                self.can_data_dict[self.can_data_name[0]] = 0.0
+            elif 'fully' in str(self.can_data_dict[self.can_data_name[0]]):
+                self.can_data_dict[self.can_data_name[0]] = 100.0
 
-            if None in can_data_dict.values():
+            if None in self.can_data_dict.values():
                 continue
             
-            yield can_data_dict
-            can_data_dict={self.can_data_name[i] : None for i in range(len(self.can_data_name))}
+            yield self.can_data_dict
+            self.can_data_dict={self.can_data_name[i] : None for i in range(len(self.can_data_name))}
 
 if __name__ == '__main__':
-    vehicle = 'NE'
-    can_db_path=os.path.join(os.path.dirname(__file__), 'dbc', '230518_NE1_2021_FD_C_v2.dbc')
-    can_msg = ['VCU_AccPedDepVal']
+    vehicle = 'IONIQ19'
+    can_db_path=os.path.join(os.path.dirname(__file__), 'dbc', 'C_CAN.dbc')
+    can_msg = ['CR_Ems_AccPedDep_Pc', 'CR_Brk_StkDep_Pc']
     for i in Can_parser(vehicle=vehicle, can_db_path=can_db_path, can_data_name=can_msg).get_can_data():
         print(i)
