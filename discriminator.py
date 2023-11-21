@@ -2,7 +2,7 @@ from config import configParam
 from can_parser import CAN_parser
 from time import time
 
-class DiscriminatorCornerDuration(object):
+class DiscriminatorCorner(object):
     def __init__(self, vehicle='IONIQ19'):
         # Criteria for Corner
         self.steerAngleOn = configParam['StrAngOn']
@@ -34,7 +34,7 @@ class DiscriminatorCornerDuration(object):
         self.check_info()
         
         # Set CAN Parser
-        self.can_msg_list = ['HEV_PC4', 'SAS11', 'ESP12'], # KMU
+        self.can_msg_list = ['HEV_PC4', 'SAS11', 'ESP12'] # KMU
         self.signal_veh_spd = 'CR_Ems_VehSpd_Kmh'
         self.signal_steer_ang = 'SAS_Angle'
         self.signal_steer_spd = 'SAS_Speed'
@@ -72,15 +72,15 @@ class DiscriminatorCornerDuration(object):
         flag = True
         if steer_ang < self.minStrAng_deg or steer_ang > self.maxStrAng_deg:
             flag = False
-            print(">>>>> Out of range (Steer Angle):", steer_ang)
+            # print(f">>>>> Out of range (Steer Angle): {steer_ang:.2f}", end='\r')
             
         if veh_spd < self.minVehSpd_kph or veh_spd > self.maxVehSpd_kph:
             flag = False
-            print(">>>>> Out of range (Velocity):", veh_spd)
+            # print(f">>>>> Out of range (Velocity): {veh_spd:.2f}", end='\r')
         
         if ay < self.minAy_g or ay > self.maxAy_g:
             flag = False
-            print(">>>>> Out of range (Lateral Acceleration):", ay)
+            # print(f">>>>> Out of range (Lateral Acceleration: {ay:.2f})",  end='\r')
             
         return flag
 
@@ -88,60 +88,62 @@ class DiscriminatorCornerDuration(object):
         flag_driving = False
         flag_corner = False
         
-        steer_ang = self.latest_signal_dic.pop(self.signal_steer_ang)
-        steer_spd = self.latest_signal_dic.pop(self.signal_steer_spd)
-        veh_spd = self.latest_signal_dic.pop(self.signal_veh_spd)
-        ay = self.latest_signal_dic.pop(self.signal_ay)
+        steer_ang = self.latest_signal_dic.get(self.signal_steer_ang)
+        steer_spd = self.latest_signal_dic.get(self.signal_steer_spd)
+        veh_spd = self.latest_signal_dic.get(self.signal_veh_spd)
+        ay = self.latest_signal_dic.get(self.signal_ay) / 9.81
         
         # get corner flag
         flag_corner = self.get_corner_flag(steer_ang, steer_spd)
         # get driving flag
         flag_driving = self.get_driving_flag(steer_ang, veh_spd, ay)
             
-        if flag_corner & flag_driving:
-            if self.flag:
-                self.time_from_init += self.sampling_time
-            
-            else:
-                self.time_from_init = 0.
+        if flag_corner and flag_driving:
+            if not self.flag:
                 self.flag = True
                 self.cnt_patience = 0
         
         else:
-            if self.cnt_patience <= self.max_cnt_patience:
-                self.time_from_init += self.sampling_time
-                self.cnt_patience += 1
-                
-            else:
-                self.cnt_patience = 0
-                self.flag = False
-                self.time_from_init = -1
+            if self.flag:
+                if self.cnt_patience <= self.max_cnt_patience:
+                    self.cnt_patience += 1
+                else:
+                    self.cnt_patience = 0
+                    self.flag = False
         
-        return self.time_from_init
     
     def run(self):
-        
+        prev_time = 0.0
+
         for data_dic, data_time in self.can_parser.get_can_data(self.can_signal_list):
-            # print(time() - data_time)
             for k, v in data_dic.items():
-                self.latest_signal_dic.update({k, v})
+                self.latest_signal_dic.update({k:v})
             
             if len(self.latest_signal_dic.keys()) < len(self.can_signal_list):
                 continue
             
-            if (time() - prev_time) < self.sampling_time:
-                continue
+            # if (prev_time != 0.0) and ((time() - prev_time) < self.sampling_time):
+                # continue
             
-            if (time() - prev_time) > self.sampling_time*1.5:
+            if (prev_time != 0.0) and ((time() - prev_time) > self.sampling_time*2.0):
                 raise TimeoutError(f"Operation timed out, {time()-prev_time}")
             
-            corner_duration_time = self.discriminate()
+            self.discriminate()
+
+            # if (self.flag) and (self.time_from_init == -1):
+                # self.time_from_init = 0.0
+            # else:
+                # if self.flag and ((time() - prev_time) >= self.samplint_time):
+                    # self.time_from_init += self.sampling_time
             prev_time = time()
-            yield corner_duration_time
+            # print(self.flag)
+            #print(prev_time - str_)
+            # yield self.time_from_init
+            yield self.flag
             
         
         
 if __name__ == "__main__":
-    discriminator = DiscriminatorCornerDuration()
+    discriminator = DiscriminatorCorner()
     for duration_time in discriminator.run():
-        print(duration_time)
+        print(f"{duration_time}       ", end='\r')
