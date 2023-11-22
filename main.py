@@ -24,9 +24,15 @@ def run_discriminator(shared_flag, lock, stop_event):
     discriminator = DiscriminatorCorner()
     for duration_time in discriminator.run():
         if stop_event.is_set():
-                break
+            break
         shared_flag.value = duration_time
         print(f"{duration_time}       ", end='\r')
+    
+def generate_input(shared_flag, lock, stop_event):
+    if stop_event.is_set():
+        break
+    print(bool(shared_flag.value))
+    pass
     
 def main():
     procs = []
@@ -36,6 +42,8 @@ def main():
     
     print("[INFO] Main thread started.")
     multiproc_settings = {'DiscriminatorCorner': {'target': run_discriminator,
+                                        'args': (shared_flag, lock, stop_event)},
+                          'GeneratorInput': {'target': GeneratorInput,
                                         'args': (shared_flag, lock, stop_event)},
                         }
     
