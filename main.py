@@ -1,6 +1,9 @@
 import multiprocessing
+import multiprocessing.shared_memory
 import os
 import argparse
+import numpy as np
+import sys
 
 from discriminator import DiscriminatorCorner
 
@@ -22,29 +25,34 @@ args = parser.parse_args()
 
 def run_discriminator(shared_flag, lock, stop_event):
     discriminator = DiscriminatorCorner()
-    for duration_time in discriminator.run():
+    for corner_flag in discriminator.run():
         if stop_event.is_set():
             break
-        shared_flag.value = duration_time
-        print(f"{duration_time}       ", end='\r')
+        shared_flag.value = corner_flag
+        print(f"{corner_flag}       ", end='\r')
     
+
 def generate_input(shared_flag, lock, stop_event):
-    if stop_event.is_set():
-        break
-    print(bool(shared_flag.value))
-    pass
-    
+    while True:
+        if stop_event.is_set():
+            break
+        print(bool(shared_flag.value))
+
+
 def main():
     procs = []
     stop_event = multiprocessing.Event()
-    shared_flag = multiprocessing.Value('i', True)
+    # shared_flag = multiprocessing.Value('i', True)
+    shared_flag_init = np.array([False])
+    shared_flag_arr = multiprocessing.shared_memory.SharedMemory(create=True, size=shared_flag_init.nbytes)
+    shared_flag = np.ndarray(shared_flag_init.shape, dtype=shared_flag_init.dtype, buffer=shared_flag_arr.buf)
     lock = multiprocessing.Lock()
     
     print("[INFO] Main thread started.")
     multiproc_settings = {'DiscriminatorCorner': {'target': run_discriminator,
                                         'args': (shared_flag, lock, stop_event)},
-                          'GeneratorInput': {'target': GeneratorInput,
-                                        'args': (shared_flag, lock, stop_event)},
+                          'GeneratorInput': {'target': generate_input,
+                                        'args': (shared_flag_arr, lock, stop_event)},
                         }
     
     for key, value in multiproc_settings.items():
