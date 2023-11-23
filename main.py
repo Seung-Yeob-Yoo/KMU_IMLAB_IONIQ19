@@ -23,21 +23,21 @@ parser.add_argument('--isSave', type=str2bool, default=False,
 args = parser.parse_args()
 '''
 
-def run_discriminator(shared_flag, lock, stop_event):
+def run_discriminator(shared_flag, shared_memory_name, lock, stop_event):
     discriminator = DiscriminatorCorner()
     for corner_flag in discriminator.run():
         if stop_event.is_set():
             break
-        shared_flag.value = corner_flag
+        shared_flag[0] = corner_flag
         print(f"{corner_flag}       ", end='\r')
     
-
-def generate_input(shared_flag, lock, stop_event):
+def generate_input(shared_flag, shared_memory_name, lock, stop_event):
+    existing_shm = multiprocessing.shared_memory.SharedMemory(name=shared_memory_name)
     while True:
         if stop_event.is_set():
             break
-        print(bool(shared_flag.value))
-
+        existing_shm = np.ndarray((1,), dtype=np.bool_, buffer=existing_shm.buf)
+        print(existing_shm)
 
 def main():
     procs = []
@@ -45,14 +45,15 @@ def main():
     # shared_flag = multiprocessing.Value('i', True)
     shared_flag_init = np.array([False])
     shared_flag_arr = multiprocessing.shared_memory.SharedMemory(create=True, size=shared_flag_init.nbytes)
+    shared_memory_name = shared_flag_arr.name
     shared_flag = np.ndarray(shared_flag_init.shape, dtype=shared_flag_init.dtype, buffer=shared_flag_arr.buf)
     lock = multiprocessing.Lock()
     
     print("[INFO] Main thread started.")
     multiproc_settings = {'DiscriminatorCorner': {'target': run_discriminator,
-                                        'args': (shared_flag, lock, stop_event)},
+                                        'args': (shared_flag, shared_memory_name, lock, stop_event)},
                           'GeneratorInput': {'target': generate_input,
-                                        'args': (shared_flag_arr, lock, stop_event)},
+                                        'args': (shared_flag_arr, shared_memory_name, lock, stop_event)},
                         }
     
     for key, value in multiproc_settings.items():
