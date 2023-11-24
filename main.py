@@ -4,8 +4,10 @@ import os
 import argparse
 import numpy as np
 import sys
+from time import time
 
 from discriminator import DiscriminatorCorner
+from generator import Generator_Input
 
 def str2bool(v):
     if v.lower() in ('yes', 'true', 't', 'y', '1'):
@@ -23,44 +25,102 @@ parser.add_argument('--isSave', type=str2bool, default=False,
 args = parser.parse_args()
 '''
 
-def run_discriminator(shared_flag, shared_memory_name, stop_event):
-    c = shared_memory.SharedMemory(name=shared_memory_name)
-    shared_flag = np.ndarray((1,), dtype=np.bool_, buffer=c.buf)
+def run_discriminator(flag_info, stop_event):
+    flag_mem = shared_memory.SharedMemory(name=flag_info['name'])
+    flag = np.ndarray(flag_info['shape'], dtype=flag_info['dtype'], buffer=flag_mem.buf)
 
     discriminator = DiscriminatorCorner()
     
     for corner_flag in discriminator.run():
         if stop_event.is_set():
-            c.close()
             break
-        shared_flag[0] = corner_flag
+        flag[0] = corner_flag
     
-def generate_input(shared_flag, shared_memory_name, stop_event):
-    c = shared_memory.SharedMemory(name=shared_memory_name)
-    shared_flag = np.ndarray((1,), dtype=np.bool_, buffer=c.buf)
+    flag_mem.close()
+    
+def generate_input(flag_info, u_info, t_info, stop_event):
+    flag_mem = shared_memory.SharedMemory(name=flag_info['name'])
+    flag = np.ndarray(flag_info['shape'], dtype=flag_info['dtype'], buffer=flag_mem.buf)
+    
+    u_mem = shared_memory.SharedMemory(name=u_info['name'])
+    u = np.ndarray(u_info['shape'], dtype=u_info['dtype'], buffer=u_mem.buf)
+    
+    t_mem = shared_memory.SharedMemory(name=t_info['name'])
+    t = np.ndarray(t_info['shape'], dtype=t_info['dtype'], buffer=t_mem.buf)
 
+    generator = Generator_Input()
+    
     while True:
         if stop_event.is_set():
-            c.close()
             break
-        print(shared_flag, end='\r')
+        while time() - generator.time < generator.sampling_time:
+            pass
+        
+        if flag:
+            if t[0, 0] == -1:
+                u_cur, u_idx, t_cur = generator.reset()
+            else:
+                u_cur, u_idx, t_cur = generator.update()
+            
+            t[0, 0] = t_cur
+            u[0, u_idx] = u_cur
+            
+            if u_idx > 5:
+                print(u[u_idx-5:u_idx+5])
+                
+    flag_mem.close()
+    u_mem.close()
+    t_mem.close()
 
 def main():
     procs = []
     stop_event = multiprocessing.Event()
 
-    shared_flag_init = np.array([False])
-    shared_mem = multiprocessing.shared_memory.SharedMemory(create=True, size=shared_flag_init.nbytes)
-    shared_memory_name = shared_mem.name
-    shared_flag = np.ndarray(shared_flag_init.shape, dtype=shared_flag_init.dtype, buffer=shared_mem.buf)
-    shared_flag = shared_flag_init
-    del shared_flag_init
+    # define shared flag
+    flag_init = np.array([False], dtype=np.bool_)
+    flag_mem = multiprocessing.shared_memory.SharedMemory(create=True, size=flag_init.nbytes)
+    flag_info = {
+        'name':flag_mem.name,
+        'dtype':flag_init.nbytes,
+        'shape':flag_init.shape,
+    }
+    
+    flag = np.ndarray(flag_init.shape, dtype=flag_init.dtype, buffer=flag_mem.buf)
+    flag = flag_init
+    del flag_init
+    
+    # define shared input u
+    u_init = np.zeros((1, 500), dtype=np.float32)
+    u_mem = multiprocessing.shared_memory.SharedMemory(create=True, size=u_init.nbytes)
+    u_info = {
+        'name':u_mem.name,
+        'dtype':u_init.nbytes,
+        'shape':u_init.shape,
+    }
+    
+    u = np.ndarray(u_info['shape'], dtype=u_info['dtype'], buffer=u_mem.buf)
+    u = u_init
+    del u_init
+    
+    # define shared input t
+    t_init = np.ones((1, 1), dtype=np.float32) * -1
+    t_mem = multiprocessing.shared_memory.SharedMemory(create=True, size=t_init.nbytes)
+    t_info = {
+        'name':t_mem.name,
+        'dtype':t_init.nbytes,
+        'shape':t_init.shape,
+    }
+    
+    t = np.ndarray(t_info['shape'], dtype=t_info['dtype'], buffer=t_mem.buf)
+    t = t_init
+    del t_init
+    
     
     print("[INFO] Main thread started.")
     multiproc_settings = {'DiscriminatorCorner': {'target': run_discriminator,
-                                        'args': (shared_flag, shared_memory_name, stop_event)},
-                          'GeneratorInput': {'target': generate_input,
-                                        'args': (shared_flag, shared_memory_name, stop_event)},
+                                        'args': (flag_info, stop_event)},
+                        'GeneratorInput': {'target': generate_input,
+                                        'args': (flag_info, u_info, t_info, stop_event)},
                         }
     
     for key, value in multiproc_settings.items():
@@ -73,6 +133,7 @@ def main():
     terminate_signal = input("[REQUEST] Press 'Enter' if you want to terminate every processes.\n\n")
     while terminate_signal != '':
         print("[REQUEST] Invalid input! Press 'Enter'")
+        print(t[0, 0])
         terminate_signal = input()
 
     stop_event.set()        
@@ -80,8 +141,12 @@ def main():
     for proc in procs:
         proc.join()
     
-    shared_mem.close()
-    shared_mem.unlink()
+    flag_mem.close()
+    flag_mem.unlink()
+    u_mem.close()
+    u_mem.unlink()
+    t_mem.close()
+    t_mem.unlink()
 
 if __name__ == '__main__':
     main()
