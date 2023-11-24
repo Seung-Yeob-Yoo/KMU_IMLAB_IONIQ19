@@ -22,7 +22,7 @@ class CAN_parser:
         self.CAN_db = cantools.database.load_file(self.can_db_path)
 
         self.can_msg_list = can_msg_list
-        self.can_signal_list = can_signal_list
+        #self.can_signal_list = can_signal_list
         
         for msg in self.can_msg_list:
             if not msg in [can_msg.name for can_msg in self.CAN_db.messages]:
