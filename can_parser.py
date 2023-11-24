@@ -52,18 +52,21 @@ class CAN_parser:
             for k, v in data_dic.items():
                 print(k, v)
         '''
-        while True:
-            can_msg = self.can_bus.recv()
-            can_data = self.CAN_db.decode_message(can_msg.arbitration_id, can_msg.data)
-            can_time = can_msg.timestamp
+        with self.can_bus as can_bus:
+            while True:
+                #can_msg = self.can_bus.recv()
+                can_msg = can_bus.recv()
+                can_data = self.CAN_db.decode_message(can_msg.arbitration_id, can_msg.data)
+                can_time = can_msg.timestamp
 
-            cur_keys = [key for key in can_data.keys() if key in can_signal_list]
+                cur_keys = [key for key in can_data.keys() if key in can_signal_list]
+                
+                data_dic = {}
+                for key in cur_keys:
+                    data_dic[key] = can_data[key]
+
+                yield data_dic, can_time
             
-            data_dic = {}
-            for key in cur_keys:
-                data_dic[key] = can_data[key]
-
-            yield data_dic, can_time
 
     def save_can_data(self, file_name, can_signal_list):
         print(f"[I] CSV file is being written...{file_name}")
