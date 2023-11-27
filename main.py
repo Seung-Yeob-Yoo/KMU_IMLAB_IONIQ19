@@ -47,6 +47,7 @@ def generate_input(flag_info, u_info, t_info, stop_event):
     
     t_mem = shared_memory.SharedMemory(name=t_info['name'])
     t = np.ndarray(t_info['shape'], dtype=t_info['dtype'], buffer=t_mem.buf)
+    t[0, 0] = -1
 
     generator = Generator_Input()
     
@@ -55,18 +56,23 @@ def generate_input(flag_info, u_info, t_info, stop_event):
             break
         while time() - generator.time < generator.sampling_time:
             pass
-        
+        # print(flag, t, end='\r')        
         if flag:
             if t[0, 0] == -1:
+                # print("RRRRRRRRRRRRRRRRRRRRR")
                 u_cur, u_idx, t_cur = generator.reset()
             else:
+                # print("UUUUUUUUUUUUUUUUUUUUU")
                 u_cur, u_idx, t_cur = generator.update()
             
-            t[0, 0] = t_cur
-            u[0, u_idx] = u_cur
+            if u_idx < 500:
+                t[0, 0] = t_cur
+                u[0, 0, u_idx] = u_cur
             
-            if u_idx > 5:
-                print(u[u_idx-5:u_idx+5])
+            if (u_idx > 5) and (u_idx < 499):
+                print(t_cur)
+                print(t[0, 0])
+                print(u[0, 0, u_idx-5:u_idx+5])
                 
     flag_mem.close()
     u_mem.close()
@@ -81,20 +87,20 @@ def main():
     flag_mem = multiprocessing.shared_memory.SharedMemory(create=True, size=flag_init.nbytes)
     flag_info = {
         'name':flag_mem.name,
-        'dtype':flag_init.nbytes,
+        'dtype':flag_init.dtype,
         'shape':flag_init.shape,
     }
     
-    flag = np.ndarray(flag_init.shape, dtype=flag_init.dtype, buffer=flag_mem.buf)
+    flag = np.ndarray(flag_init.shape, dtype=flag_info['dtype'], buffer=flag_mem.buf)
     flag = flag_init
     del flag_init
     
     # define shared input u
-    u_init = np.zeros((1, 500), dtype=np.float32)
+    u_init = np.zeros((1, 1, 500), dtype=np.float32)
     u_mem = multiprocessing.shared_memory.SharedMemory(create=True, size=u_init.nbytes)
     u_info = {
         'name':u_mem.name,
-        'dtype':u_init.nbytes,
+        'dtype':u_init.dtype,
         'shape':u_init.shape,
     }
     
@@ -107,13 +113,14 @@ def main():
     t_mem = multiprocessing.shared_memory.SharedMemory(create=True, size=t_init.nbytes)
     t_info = {
         'name':t_mem.name,
-        'dtype':t_init.nbytes,
+        'dtype':t_init.dtype,
         'shape':t_init.shape,
     }
     
     t = np.ndarray(t_info['shape'], dtype=t_info['dtype'], buffer=t_mem.buf)
     t = t_init
     del t_init
+    print(t)
     
     
     print("[INFO] Main thread started.")
@@ -126,14 +133,15 @@ def main():
     for key, value in multiproc_settings.items():
         proc = multiprocessing.Process(target=value['target'], args=value['args'])
         procs.append(proc)
+    print(t)
         
     for proc in procs:
         proc.start()
+    print(t)
         
     terminate_signal = input("[REQUEST] Press 'Enter' if you want to terminate every processes.\n\n")
     while terminate_signal != '':
         print("[REQUEST] Invalid input! Press 'Enter'")
-        print(t[0, 0])
         terminate_signal = input()
 
     stop_event.set()        

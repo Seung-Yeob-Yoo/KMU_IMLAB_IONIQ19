@@ -32,7 +32,7 @@ class Generator_Input(object):
         return self.get_u(), self.u_idx, self.input_t
         
     def update(self):
-        self.input_t =+ self.sampling_time
+        self.input_t += self.sampling_time
         self.u_idx += 1
         self.time = time()
         
