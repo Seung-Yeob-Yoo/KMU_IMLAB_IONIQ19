@@ -37,24 +37,30 @@ def inference(u_info, t_info, x_info, stop_event):
     x_mem = shared_memory.SharedMemory(name=x_info['name'])
     x = np.ndarray(x_info['shape'], dtype=x_info['dtype'], buffer=x_mem.buf)
     
-    model_path = os.path.dirname(__file__, 'roll_model')
+    model_path = os.path.join(os.path.dirname(__file__), 'roll_model')
 
-    model = get_origin_model(model_path)
+    # model = get_origin_model(model_path)
     model = TFlite_model(model_path)
-    
+    prev_t = np.array([[-1.]], dtype=np.float32)
     while True:
         if stop_event.is_set():
             break
         
-        if not t[0, 0] == -1:
-            while cur_t == prev_t:
+        # print(t[0, 0])
+        if t[0, 0] != -1:
+            cur_t = t[0, 0].copy()
+            while (cur_t == prev_t) or (cur_t == -1):
+                print(cur_t)
                 cur_t = t[0, 0].copy()
+            print(cur_t)
             
             output_ = model([u.copy(), t.copy()])
             
+            # x[:, :] = output_.numpy().copy()
             x[:, :] = output_.copy()
                 
             prev_t = cur_t.copy()
+            print(x)
                 
     u_mem.close()
     t_mem.close()

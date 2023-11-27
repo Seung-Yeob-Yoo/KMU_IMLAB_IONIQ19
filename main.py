@@ -8,6 +8,7 @@ from time import time
 
 from discriminator import DiscriminatorCorner
 from generator import Generator_Input
+from inference import inference
 
 def str2bool(v):
     if v.lower() in ('yes', 'true', 't', 'y', '1'):
@@ -67,12 +68,13 @@ def generate_input(flag_info, u_info, t_info, stop_event):
             
             if u_idx < 500:
                 t[0, 0] = t_cur
-                u[0, 0, u_idx] = u_cur
+                u[0, u_idx] = u_cur
             
-            if (u_idx > 5) and (u_idx < 499):
-                print(t_cur)
-                print(t[0, 0])
-                print(u[0, 0, u_idx-5:u_idx+5])
+        else:
+            if t[0, 0] != -1:
+                t[0, 0] = -1.
+                u = np.zeros((1, 500), dtype=np.float32)
+
                 
     flag_mem.close()
     u_mem.close()
@@ -96,7 +98,7 @@ def main():
     del flag_init
     
     # define shared input u
-    u_init = np.zeros((1, 1, 500), dtype=np.float32)
+    u_init = np.zeros((1, 500), dtype=np.float32)
     u_mem = multiprocessing.shared_memory.SharedMemory(create=True, size=u_init.nbytes)
     u_info = {
         'name':u_mem.name,
@@ -122,12 +124,26 @@ def main():
     del t_init
     print(t)
     
+    # define shared input x
+    x_init = np.zeros((1, 2), dtype=np.float32)
+    x_mem = multiprocessing.shared_memory.SharedMemory(create=True, size=x_init.nbytes)
+    x_info = {
+        'name':x_mem.name,
+        'dtype':x_init.dtype,
+        'shape':x_init.shape,
+    }
+    
+    x = np.ndarray(x_info['shape'], dtype=x_info['dtype'], buffer=x_mem.buf)
+    x = x_init
+    del x_init
     
     print("[INFO] Main thread started.")
     multiproc_settings = {'DiscriminatorCorner': {'target': run_discriminator,
                                         'args': (flag_info, stop_event)},
                         'GeneratorInput': {'target': generate_input,
                                         'args': (flag_info, u_info, t_info, stop_event)},
+                        'Inference': {'target': inference,
+                            'args': (u_info, t_info, x_info, stop_event)},
                         }
     
     for key, value in multiproc_settings.items():
@@ -155,6 +171,8 @@ def main():
     u_mem.unlink()
     t_mem.close()
     t_mem.unlink()
+    x_mem.close()
+    x_mem.unlink()
 
 if __name__ == '__main__':
     main()
