@@ -4,6 +4,7 @@ from multiprocessing import shared_memory
 import numpy as np
 import os
 from glob import glob
+import time
 
 class TFlite_model(object):
     def __init__(self, model_path):
@@ -42,6 +43,7 @@ def inference(u_info, t_info, x_info, stop_event):
     # model = get_origin_model(model_path)
     model = TFlite_model(model_path)
     prev_t = np.array([[-1.]], dtype=np.float32)
+    inf_time_arr = []
     while True:
         if stop_event.is_set():
             break
@@ -54,14 +56,20 @@ def inference(u_info, t_info, x_info, stop_event):
                 cur_t = t[0, 0].copy()
             print(cur_t)
             
+            start_time = time.time()
             output_ = model([u.copy(), t.copy()])
+            inf_time_arr.append(time.time() - start_time)
             
             # x[:, :] = output_.numpy().copy()
             x[:, :] = output_.copy()
                 
             prev_t = cur_t.copy()
             print(x)
-                
+    
+    inf_time_arr = np.array(inf_time_arr)
+    save_path = os.path.join(os.path.dirname(__file__), 'log', 'TFlite_model') # get_origin_model, TFlite_model
+    np.save(save_path, inf_time_arr)
+    
     u_mem.close()
     t_mem.close()
     x_mem.close()
