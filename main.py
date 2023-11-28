@@ -4,7 +4,7 @@ import os
 import argparse
 import numpy as np
 import sys
-from time import time
+import time
 
 from discriminator import DiscriminatorCorner
 from generator import Generator_Input
@@ -55,7 +55,7 @@ def generate_input(flag_info, u_info, t_info, stop_event):
     while True:
         if stop_event.is_set():
             break
-        while time() - generator.time < generator.sampling_time:
+        while time.time() - generator.time < generator.sampling_time:
             pass
         # print(flag, t, end='\r')        
         if flag:
@@ -154,7 +154,8 @@ def main():
     for proc in procs:
         proc.start()
     print(t)
-        
+    
+    time.sleep(3)
     terminate_signal = input("[REQUEST] Press 'Enter' if you want to terminate every processes.\n\n")
     while terminate_signal != '':
         print("[REQUEST] Invalid input! Press 'Enter'")

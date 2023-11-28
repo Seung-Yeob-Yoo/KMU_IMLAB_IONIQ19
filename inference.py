@@ -40,10 +40,11 @@ def inference(u_info, t_info, x_info, stop_event):
     
     model_path = os.path.join(os.path.dirname(__file__), 'roll_model')
 
-    # model = get_origin_model(model_path)
-    model = TFlite_model(model_path)
+    # model = get_origin_model(model_path) # for origin model
+    model = TFlite_model(model_path) # for tflite model
+
     prev_t = np.array([[-1.]], dtype=np.float32)
-    inf_time_arr = []
+
     while True:
         if stop_event.is_set():
             break
@@ -52,23 +53,16 @@ def inference(u_info, t_info, x_info, stop_event):
         if t[0, 0] != -1:
             cur_t = t[0, 0].copy()
             while (cur_t == prev_t) or (cur_t == -1):
-                print(cur_t)
+                # print(cur_t)
                 cur_t = t[0, 0].copy()
-            print(cur_t)
+            # print(cur_t)
             
-            start_time = time.time()
             output_ = model([u.copy(), t.copy()])
-            inf_time_arr.append(time.time() - start_time)
-            
-            # x[:, :] = output_.numpy().copy()
-            x[:, :] = output_.copy()
+            # x[:, :] = output_.numpy().copy() # for origin model
+            x[:, :] = output_.copy() # for tflite model
                 
             prev_t = cur_t.copy()
-            print(x)
-    
-    inf_time_arr = np.array(inf_time_arr)
-    save_path = os.path.join(os.path.dirname(__file__), 'log', 'TFlite_model') # get_origin_model, TFlite_model
-    np.save(save_path, inf_time_arr)
+            # print(x)
     
     u_mem.close()
     t_mem.close()
