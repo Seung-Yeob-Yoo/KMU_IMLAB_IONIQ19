@@ -58,7 +58,7 @@ def update_can(vehicle, ay_cur_info, s_cur_info, vx_cur_info, stop_event):
         
         for k, v in data_dic.items():
             if k == 'LAT_ACCEL':
-                ay_cur = v / 9.81    # m/s
+                ay_cur = v # m/s2
             elif k == 'SAS_Speed':
                 s_cur = (v / vehicleParam[vehicle]['StrGearRatio']) * CONVERSION_FACTOR['DEG2RAD']
             elif k == 'CR_Ems_VehSpd_Kmh':
