@@ -6,9 +6,10 @@ import numpy as np
 import sys
 import time
 
+from config import vehicleParam, configParam, CONVERSION_FACTOR
 from discriminator import DiscriminatorCorner
-from generator import Generator_Input
-from inference import inference
+from generator import Update_CAN
+from inference import inference_roll, inference_lateral
 
 def str2bool(v):
     if v.lower() in ('yes', 'true', 't', 'y', '1'):
@@ -26,11 +27,11 @@ parser.add_argument('--isSave', type=str2bool, default=False,
 args = parser.parse_args()
 '''
 
-def run_discriminator(flag_info, stop_event):
+def run_discriminator(vehicle, flag_info, stop_event):
     flag_mem = shared_memory.SharedMemory(name=flag_info['name'])
     flag = np.ndarray(flag_info['shape'], dtype=flag_info['dtype'], buffer=flag_mem.buf)
 
-    discriminator = DiscriminatorCorner()
+    discriminator = DiscriminatorCorner(vehicle=vehicle)
     
     for corner_flag in discriminator.run():
         if stop_event.is_set():
@@ -39,48 +40,101 @@ def run_discriminator(flag_info, stop_event):
     
     flag_mem.close()
     
-def generate_input(flag_info, u_info, t_info, stop_event):
+def update_can(vehicle, ay_cur_info, s_cur_info, vx_cur_info, stop_event):
+    ay_cur_mem = shared_memory.SharedMemory(name=ay_cur_info['name'])
+    ay_cur = np.ndarray_cur(ay_cur_info['shape'], dtype=ay_cur_info['dtype'], buffer=ay_cur_mem.buf)
+    
+    s_cur_mem = shared_memory.SharedMemory(name=s_cur_info['name'])
+    s_cur = np.ndarray_cur(s_cur_info['shape'], dtype=s_cur_info['dtype'], buffer=s_cur_mem.buf)
+    
+    vx_cur_mem = shared_memory.SharedMemory(name=vx_cur_info['name'])
+    vx_cur = np.ndarray_cur(vx_cur_info['shape'], dtype=vx_cur_info['dtype'], buffer=vx_cur_mem.buf)
+    
+    updator = Update_CAN(vehicle=vehicle)
+    
+    for data_dic in updator.run():
+        if stop_event.is_set():
+            break
+        
+        for k, v in data_dic.items():
+            if k == 'LAT_ACCEL':
+                ay_cur = v / 9.81    # m/s
+            elif k == 'SAS_Speed':
+                s_cur = (v / vehicleParam[vehicle]['StrGearRatio']) * CONVERSION_FACTOR['DEG2RAD']
+            elif k == 'CR_Ems_VehSpd_Kmh':
+                vx_cur = v * CONVERSION_FACTOR['KPH2MPS']
+    
+    ay_cur_mem.close()
+    s_cur_mem.close()
+    vx_cur_mem.close()
+
+    
+def generate_input(flag_info, ay_info, s_vx_info, ay_cur_info, s_cur_info, vx_cur_info, t_info, stop_event):
     flag_mem = shared_memory.SharedMemory(name=flag_info['name'])
     flag = np.ndarray(flag_info['shape'], dtype=flag_info['dtype'], buffer=flag_mem.buf)
     
-    u_mem = shared_memory.SharedMemory(name=u_info['name'])
-    u = np.ndarray(u_info['shape'], dtype=u_info['dtype'], buffer=u_mem.buf)
+    ay_mem = shared_memory.SharedMemory(name=ay_info['name'])
+    ay = np.ndarray(ay_info['shape'], dtype=ay_info['dtype'], buffer=ay_mem.buf)
+    
+    s_vx_mem = shared_memory.SharedMemory(name=s_vx_info['name'])
+    s_vx = np.ndarray(s_vx_info['shape'], dtype=s_vx_info['dtype'], buffer=s_vx_mem.buf)
     
     t_mem = shared_memory.SharedMemory(name=t_info['name'])
     t = np.ndarray(t_info['shape'], dtype=t_info['dtype'], buffer=t_mem.buf)
     t[0, 0] = -1
-
-    generator = Generator_Input()
+    
+    ay_cur_mem = shared_memory.SharedMemory(name=ay_cur_info['name'])
+    ay_cur = np.ndarray_cur(ay_cur_info['shape'], dtype=ay_cur_info['dtype'], buffer=ay_cur_mem.buf)
+    
+    s_cur_mem = shared_memory.SharedMemory(name=s_cur_info['name'])
+    s_cur = np.ndarray_cur(s_cur_info['shape'], dtype=s_cur_info['dtype'], buffer=s_cur_mem.buf)
+    
+    vx_cur_mem = shared_memory.SharedMemory(name=vx_cur_info['name'])
+    vx_cur = np.ndarray_cur(vx_cur_info['shape'], dtype=vx_cur_info['dtype'], buffer=vx_cur_mem.buf)
+    
+    get_time = time.time()
     
     while True:
         if stop_event.is_set():
             break
-        while time.time() - generator.time < generator.sampling_time:
+        while time.time() - get_time < configParam['TimeStep']:
             pass
         # print(flag, t, end='\r')        
         if flag:
             if t[0, 0] == -1:
                 # print("RRRRRRRRRRRRRRRRRRRRR")
-                u_cur, u_idx, t_cur = generator.reset()
+                # u_cur, t_idx, t_cur = generator.reset()
+                t_cur = 0.0
+                t_idx = 0
             else:
                 # print("UUUUUUUUUUUUUUUUUUUUU")
-                u_cur, u_idx, t_cur = generator.update()
+                # u_cur, t_idx, t_cur = generator.update()
+                t_cur += configParam['TimeStep']
+                t_idx += 1
+            get_time = time.time()
             
-            if u_idx < 500:
+            if t_idx < 500:
                 t[0, 0] = t_cur
-                u[0, u_idx] = u_cur
+                ay[0, t_idx] = ay_cur.copy()
+                s_vx[0, 0, t_idx] = s_cur.copy()
+                s_vx[0, 1, t_idx] = vx_cur.copy()
             
         else:
             if t[0, 0] != -1:
                 t[0, 0] = -1.
-                u = np.zeros((1, 500), dtype=np.float32)
+                ay = np.zeros((1, 500), dtype=np.float32)
+                s_vx = np.zeros((1, 2, 500), dtype=np.float32)
 
                 
     flag_mem.close()
-    u_mem.close()
+    ay_mem.close()
+    s_vx_mem.close()
     t_mem.close()
+    ay_cur_mem.close()
+    s_cur_mem.close()
+    vx_cur_mem.close()
 
-def main():
+def main(vehicle):
     procs = []
     stop_event = multiprocessing.Event()
 
@@ -97,18 +151,31 @@ def main():
     flag = flag_init
     del flag_init
     
-    # define shared input u
-    u_init = np.zeros((1, 500), dtype=np.float32)
-    u_mem = multiprocessing.shared_memory.SharedMemory(create=True, size=u_init.nbytes)
-    u_info = {
-        'name':u_mem.name,
-        'dtype':u_init.dtype,
-        'shape':u_init.shape,
+    # define shared input ay
+    ay_init = np.zeros((1, 500), dtype=np.float32)
+    ay_mem = multiprocessing.shared_memory.SharedMemory(create=True, size=ay_init.nbytes)
+    ay_info = {
+        'name':ay_mem.name,
+        'dtype':ay_init.dtype,
+        'shape':ay_init.shape,
     }
     
-    u = np.ndarray(u_info['shape'], dtype=u_info['dtype'], buffer=u_mem.buf)
-    u = u_init
-    del u_init
+    ay = np.ndarray(ay_info['shape'], dtype=ay_info['dtype'], buffer=ay_mem.buf)
+    ay = ay_init
+    del ay_init
+    
+    # define shared input s, vx
+    s_vx_init = np.zeros((1, 2, 500), dtype=np.float32)
+    s_vx_mem = multiprocessing.shared_memory.SharedMemory(create=True, size=s_vx_init.nbytes)
+    s_vx_info = {
+        'name':s_vx_mem.name,
+        'dtype':s_vx_init.dtype,
+        'shape':s_vx_init.shape,
+    }
+    
+    s_vx = np.ndarray(ay_info['shape'], dtype=s_vx_info['dtype'], buffer=s_vx_mem.buf)
+    s_vx = s_vx_init
+    del s_vx_init
     
     # define shared input t
     t_init = np.ones((1, 1), dtype=np.float32) * -1
@@ -124,26 +191,72 @@ def main():
     del t_init
     print(t)
     
-    # define shared input x
-    x_init = np.zeros((1, 2), dtype=np.float32)
-    x_mem = multiprocessing.shared_memory.SharedMemory(create=True, size=x_init.nbytes)
-    x_info = {
-        'name':x_mem.name,
-        'dtype':x_init.dtype,
-        'shape':x_init.shape,
+    # define shared output roll
+    roll_init = np.zeros((1, 2), dtype=np.float32)
+    roll_mem = multiprocessing.shared_memory.SharedMemory(create=True, size=roll_init.nbytes)
+    roll_info = {
+        'name':roll_mem.name,
+        'dtype':roll_init.dtype,
+        'shape':roll_init.shape,
     }
     
-    x = np.ndarray(x_info['shape'], dtype=x_info['dtype'], buffer=x_mem.buf)
-    x = x_init
-    del x_init
+    roll = np.ndarray(roll_info['shape'], dtype=roll_info['dtype'], buffer=roll_mem.buf)
+    roll = roll_init
+    del roll_init
+    
+    # define shared output lateral
+    lateral_init = np.zeros((1, 2), dtype=np.float32)
+    lateral_mem = multiprocessing.shared_memory.SharedMemory(create=True, size=lateral_init.nbytes)
+    lateral_info = {
+        'name':lateral_mem.name,
+        'dtype':lateral_init.dtype,
+        'shape':lateral_init.shape,
+    }
+    
+    lateral = np.ndarray(lateral_info['shape'], dtype=lateral_info['dtype'], buffer=lateral_mem.buf)
+    lateral = lateral_init
+    del lateral_init
+    
+    # define shared signal
+    signal_init = np.zeros((1,), dtype=np.float32)
+    ay_cur_mem = multiprocessing.shared_memory.SharedMemory(create=True, size=signal_init.nbytes)
+    s_cur_mem = multiprocessing.shared_memory.SharedMemory(create=True, size=signal_init.nbytes)
+    vx_cur_mem = multiprocessing.shared_memory.SharedMemory(create=True, size=signal_init.nbytes)
+    ay_cur_info = {
+        'name':ay_cur_mem.name,
+        'dtype':signal_init.dtype,
+        'shape':signal_init.shape,
+    }
+    s_cur_info = {
+        'name':s_cur_mem.name,
+        'dtype':signal_init.dtype,
+        'shape':signal_init.shape,
+    }
+    vx_cur_info = {
+        'name':vx_cur_mem.name,
+        'dtype':signal_init.dtype,
+        'shape':signal_init.shape,
+    }
+    
+    ay_cur = np.ndarray(signal_init.shape, dtype=signal_init.dtype, buffer=ay_cur_mem.buf)
+    s_cur = np.ndarray(signal_init.shape, dtype=signal_init.dtype, buffer=s_cur_mem.buf)
+    vx_cur = np.ndarray(signal_init.shape, dtype=signal_init.dtype, buffer=vx_cur_mem.buf)
+    ay_cur = signal_init
+    s_cur = signal_init
+    vx_cur = signal_init
+    del signal_init
     
     print("[INFO] Main thread started.")
     multiproc_settings = {'DiscriminatorCorner': {'target': run_discriminator,
-                                        'args': (flag_info, stop_event)},
+                                        'args': (vehicle, flag_info, stop_event)},
+                        'UpdateCan': {'target':update_can,
+                                        'args': (vehicle, ay_cur_info, s_cur_info, vx_cur_info, stop_event)},
                         'GeneratorInput': {'target': generate_input,
-                                        'args': (flag_info, u_info, t_info, stop_event)},
-                        'Inference': {'target': inference,
-                            'args': (u_info, t_info, x_info, stop_event)},
+                                        'args': (flag_info, ay_info, s_vx_info, t_info, stop_event)},
+                        'InferenceRoll': {'target': inference_roll,
+                            'args': (ay_info, t_info, roll_info, stop_event)},
+                        'InferenceLateral': {'target': inference_lateral,
+                            'args': (s_vx_info, t_info, lateral_info, stop_event)},
                         }
     
     for key, value in multiproc_settings.items():
@@ -168,12 +281,23 @@ def main():
     
     flag_mem.close()
     flag_mem.unlink()
-    u_mem.close()
-    u_mem.unlink()
+    ay_mem.close()
+    ay_mem.unlink()
+    s_vx_mem.close()
+    s_vx_mem.unlink()
     t_mem.close()
     t_mem.unlink()
-    x_mem.close()
-    x_mem.unlink()
+    roll_mem.close()
+    roll_mem.unlink()
+    lateral_mem.close()
+    lateral_mem.unlink()
+    ay_cur_mem.close()
+    ay_cur_mem.unlick()
+    s_cur_mem.close()
+    s_cur_mem.unlick()
+    vx_cur_mem.close()
+    vx_cur_mem.unlick()
 
 if __name__ == '__main__':
-    main()
+    vehicle = 'IONIQ19'
+    main(vehicle)

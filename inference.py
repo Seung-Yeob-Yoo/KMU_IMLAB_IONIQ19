@@ -25,10 +25,7 @@ class TFlite_model(object):
         return pred
 
 
-def inference(u_info, t_info, x_info, stop_event):
-    # flag_mem = shared_memory.SharedMemory(name=flag_info['name'])
-    # flag = np.ndarray(flag_info['shape'], dtype=flag_info['dtype'], buffer=flag_mem.buf)
-    
+def inference_roll(u_info, t_info, x_info, stop_event):
     u_mem = shared_memory.SharedMemory(name=u_info['name'])
     u = np.ndarray(u_info['shape'], dtype=u_info['dtype'], buffer=u_mem.buf)
     
@@ -63,6 +60,40 @@ def inference(u_info, t_info, x_info, stop_event):
                 
             prev_t = cur_t.copy()
             # print(x)
+    
+    u_mem.close()
+    t_mem.close()
+    x_mem.close()
+
+def inference_lateral(u_info, t_info, x_info, stop_event):
+    u_mem = shared_memory.SharedMemory(name=u_info['name'])
+    u = np.ndarray(u_info['shape'], dtype=u_info['dtype'], buffer=u_mem.buf)
+    
+    t_mem = shared_memory.SharedMemory(name=t_info['name'])
+    t = np.ndarray(t_info['shape'], dtype=t_info['dtype'], buffer=t_mem.buf)
+    
+    x_mem = shared_memory.SharedMemory(name=x_info['name'])
+    x = np.ndarray(x_info['shape'], dtype=x_info['dtype'], buffer=x_mem.buf)
+    
+    model_path = os.path.join(os.path.dirname(__file__), 'lateral_model')
+
+    model = TFlite_model(model_path) # for tflite model
+
+    prev_t = np.array([[-1.]], dtype=np.float32)
+
+    while True:
+        if stop_event.is_set():
+            break
+        
+        if t[0, 0] != -1:
+            cur_t = t[0, 0].copy()
+            while (cur_t == prev_t) or (cur_t == -1):
+                cur_t = t[0, 0].copy()
+            
+            output_ = model([u.copy(), t.copy()])
+            x[:, :] = output_.copy() # for tflite model
+                
+            prev_t = cur_t.copy()
     
     u_mem.close()
     t_mem.close()

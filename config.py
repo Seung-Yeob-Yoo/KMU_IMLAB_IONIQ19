@@ -21,3 +21,21 @@ configParam = {
     'AyMin':-1.0,   #g
     'AyMax':+1.0,   #g
 }
+
+vehicleParam = {
+    'NE':{
+    'StrGearRatio' : 15.004,  # steering wheel angle to front wheel angle
+    },
+    'JW':{
+    'StrGearRatio' : 13.,  # steering wheel angle to front wheel angle
+    },
+    'IONIQ19':{
+    'StrGearRatio' : 14.7,  # steering wheel angle to front wheel angle
+    },
+}
+
+import numpy as np
+CONVERSION_FACTOR = {}
+CONVERSION_FACTOR['KPH2MPS'] = 1 / 3.6
+CONVERSION_FACTOR['RAD2DEG'] = 180 / np.pi
+CONVERSION_FACTOR['DEG2RAD'] = np.pi / 180
