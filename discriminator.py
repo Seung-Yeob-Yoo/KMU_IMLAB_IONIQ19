@@ -125,8 +125,8 @@ class DiscriminatorCorner(object):
             # if (prev_time != 0.0) and ((time() - prev_time) < self.sampling_time):
                 # continue
             
-            if (prev_time != 0.0) and ((time() - prev_time) > self.sampling_time*2.0):
-                raise TimeoutError(f"Operation timed out, {time()-prev_time}")
+            # if (prev_time != 0.0) and ((time() - prev_time) > self.sampling_time*2.0):
+                # raise TimeoutError(f"Operation timed out, {time()-prev_time}")
             
             self.discriminate()
 

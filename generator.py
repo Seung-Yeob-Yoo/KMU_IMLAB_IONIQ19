@@ -20,12 +20,9 @@ class Update_CAN(object):
         self.latest_signal_dic = {}
         
         # self.sampling_time = configParam['TimeStep']
-        self.reset()
+        # self.reset()
         
     def run(self):
         for data_dic, data_time in self.can_parser.get_can_data(self.can_signal_list):
-            if len(self.latest_signal_dic.keys()) < len(self.can_signal_list):
-                continue
-            
             yield data_dic
     

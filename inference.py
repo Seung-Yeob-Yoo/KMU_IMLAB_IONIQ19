@@ -59,7 +59,6 @@ def inference_roll(u_info, t_info, x_info, stop_event):
             x[:, :] = output_.copy() # for tflite model
                 
             prev_t = cur_t.copy()
-            # print(x)
     
     u_mem.close()
     t_mem.close()
@@ -84,7 +83,7 @@ def inference_lateral(u_info, t_info, x_info, stop_event):
     while True:
         if stop_event.is_set():
             break
-        
+
         if t[0, 0] != -1:
             cur_t = t[0, 0].copy()
             while (cur_t == prev_t) or (cur_t == -1):

@@ -92,7 +92,7 @@ def visualize(flag_info, roll_out_info, lateral_out_info, stop_event):
     background_w = 700
     background_h = 700
     
-    img = get_background(background_w, background_h)
+    # img = get_background(background_w, background_h)
     
     flag_mem = shared_memory.SharedMemory(name=flag_info['name'])
     flag = np.ndarray(flag_info['shape'], dtype=flag_info['dtype'], buffer=flag_mem.buf)
@@ -102,6 +102,7 @@ def visualize(flag_info, roll_out_info, lateral_out_info, stop_event):
     
     lateral_out_mem = shared_memory.SharedMemory(name=lateral_out_info['name'])
     lateral_out = np.ndarray(lateral_out_info['shape'], dtype=lateral_out_info['dtype'], buffer=lateral_out_mem.buf)
+    
     
     while True:
         if stop_event.is_set():
@@ -115,12 +116,12 @@ def visualize(flag_info, roll_out_info, lateral_out_info, stop_event):
             
             print(roll_a, roll_r, beta_a, yaw_r)
             
-            flag_img = cv2.rectangle(img, )
-            cv2.imshow('', flag_img)
+            # flag_img = cv2.rectangle(img, )
+            # cv2.imshow('', flag_img)
             
-        cv2.imshow('', img)
+        # cv2.imshow('', img)
             
-    cv2.destroyAllWindows()
+    # cv2.destroyAllWindows()
     print('[I] Visualization is ended')
     
 if __name__ == '__main__':

@@ -10,6 +10,7 @@ from config import vehicleParam, configParam, CONVERSION_FACTOR
 from discriminator import DiscriminatorCorner
 from generator import Update_CAN
 from inference import inference_roll, inference_lateral
+from visualize import visualize
 
 def str2bool(v):
     if v.lower() in ('yes', 'true', 't', 'y', '1'):
@@ -42,16 +43,15 @@ def run_discriminator(vehicle, flag_info, stop_event):
     
 def update_can(vehicle, ay_cur_info, s_cur_info, vx_cur_info, stop_event):
     ay_cur_mem = shared_memory.SharedMemory(name=ay_cur_info['name'])
-    ay_cur = np.ndarray_cur(ay_cur_info['shape'], dtype=ay_cur_info['dtype'], buffer=ay_cur_mem.buf)
+    ay_cur = np.ndarray(ay_cur_info['shape'], dtype=ay_cur_info['dtype'], buffer=ay_cur_mem.buf)
     
     s_cur_mem = shared_memory.SharedMemory(name=s_cur_info['name'])
-    s_cur = np.ndarray_cur(s_cur_info['shape'], dtype=s_cur_info['dtype'], buffer=s_cur_mem.buf)
+    s_cur = np.ndarray(s_cur_info['shape'], dtype=s_cur_info['dtype'], buffer=s_cur_mem.buf)
     
     vx_cur_mem = shared_memory.SharedMemory(name=vx_cur_info['name'])
-    vx_cur = np.ndarray_cur(vx_cur_info['shape'], dtype=vx_cur_info['dtype'], buffer=vx_cur_mem.buf)
+    vx_cur = np.ndarray(vx_cur_info['shape'], dtype=vx_cur_info['dtype'], buffer=vx_cur_mem.buf)
     
     updator = Update_CAN(vehicle=vehicle)
-    
     for data_dic in updator.run():
         if stop_event.is_set():
             break
@@ -63,7 +63,7 @@ def update_can(vehicle, ay_cur_info, s_cur_info, vx_cur_info, stop_event):
                 s_cur = (v / vehicleParam[vehicle]['StrGearRatio']) * CONVERSION_FACTOR['DEG2RAD']
             elif k == 'CR_Ems_VehSpd_Kmh':
                 vx_cur = v * CONVERSION_FACTOR['KPH2MPS']
-    
+
     ay_cur_mem.close()
     s_cur_mem.close()
     vx_cur_mem.close()
@@ -84,15 +84,15 @@ def generate_input(flag_info, ay_info, s_vx_info, ay_cur_info, s_cur_info, vx_cu
     t[0, 0] = -1
     
     ay_cur_mem = shared_memory.SharedMemory(name=ay_cur_info['name'])
-    ay_cur = np.ndarray_cur(ay_cur_info['shape'], dtype=ay_cur_info['dtype'], buffer=ay_cur_mem.buf)
+    ay_cur = np.ndarray(ay_cur_info['shape'], dtype=ay_cur_info['dtype'], buffer=ay_cur_mem.buf)
     
     s_cur_mem = shared_memory.SharedMemory(name=s_cur_info['name'])
-    s_cur = np.ndarray_cur(s_cur_info['shape'], dtype=s_cur_info['dtype'], buffer=s_cur_mem.buf)
+    s_cur = np.ndarray(s_cur_info['shape'], dtype=s_cur_info['dtype'], buffer=s_cur_mem.buf)
     
     vx_cur_mem = shared_memory.SharedMemory(name=vx_cur_info['name'])
-    vx_cur = np.ndarray_cur(vx_cur_info['shape'], dtype=vx_cur_info['dtype'], buffer=vx_cur_mem.buf)
+    vx_cur = np.ndarray(vx_cur_info['shape'], dtype=vx_cur_info['dtype'], buffer=vx_cur_mem.buf)
     
-    get_time = time.time()
+    get_time = 0.0
     
     while True:
         if stop_event.is_set():
@@ -124,7 +124,6 @@ def generate_input(flag_info, ay_info, s_vx_info, ay_cur_info, s_cur_info, vx_cu
                 t[0, 0] = -1.
                 ay = np.zeros((1, 500), dtype=np.float32)
                 s_vx = np.zeros((1, 2, 500), dtype=np.float32)
-
                 
     flag_mem.close()
     ay_mem.close()
@@ -252,11 +251,13 @@ def main(vehicle):
                         'UpdateCan': {'target':update_can,
                                         'args': (vehicle, ay_cur_info, s_cur_info, vx_cur_info, stop_event)},
                         'GeneratorInput': {'target': generate_input,
-                                        'args': (flag_info, ay_info, s_vx_info, t_info, stop_event)},
+                                        'args': (flag_info, ay_info, s_vx_info, ay_cur_info, s_cur_info, vx_cur_info, t_info, stop_event)},
                         'InferenceRoll': {'target': inference_roll,
                             'args': (ay_info, t_info, roll_info, stop_event)},
                         'InferenceLateral': {'target': inference_lateral,
                             'args': (s_vx_info, t_info, lateral_info, stop_event)},
+                        'Visualize': {'target': visualize,
+                            'args': (flag_info, roll_info, lateral_info, stop_event)},
                         }
     
     for key, value in multiproc_settings.items():
