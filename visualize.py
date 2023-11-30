@@ -4,165 +4,193 @@ import sys
 import os
 import socket
 import time
-from config import CONVERSION_FACTOR
+from config import CONVERSION_FACTOR, maxValue
 
 class Visualize: 
-    def __init__(self, background_w, background_h):#, flag_info, roll_out_info, lateral_out_info):
-        # flag_mem = shared_memory.SharedMemory(name=flag_info['name'])
-        # self.flag = np.ndarray(flag_info['shape'], dtype=flag_info['dtype'], buffer=flag_mem.buf)
+    def __init__(self, signal_list=['Beta', 'YawRate', 'Roll', 'RollRate'], w=700, h=700):
+        # option for drawing
+        self.delay_time = 0.01
         
-        # roll_out_mem = shared_memory.SharedMemory(name=roll_out_info['name'])
-        # self.roll_out = np.ndarray(roll_out_info['shape'], dtype=roll_out_info['dtype'], buffer=roll_out_mem.buf)
-        
-        # lateral_out_mem = shared_memory.SharedMemory(name=lateral_out_info['name'])
-        # self.lateral_out = np.ndarray(lateral_out_info['shape'], dtype=lateral_out_info['dtype'], buffer=lateral_out_mem.buf)
+        self.maxValue = maxValue
         
         # option for background
+        ## canvas
+        self.w = w
+        self.h = h
+        
+        ## font
         self.font = cv2.FONT_HERSHEY_COMPLEX
-        self.background_w = background_w
-        background_h = background_h
+        self.font_size = 700/(self.w*self.h)**0.5
+        self.value_size = self.font_size * 0.8
         
-        self.line_thickness = 2
-        self.font_size = 700/(self.background_w*background_h)**0.5
+        # thickness
+        self.thick = 2
         
-        zero = '0'
-        zero_textsize = cv2.getTextSize(zero, self.font, self.font_size, self.line_thickness)[0]
+        # option for color
+        self.base_color = (0, 255, 0)
+        self.gauge_color = (0, 0, 255)
         
-        # option for beta
-        self.beta_text_color = (0,255,0)
-        beta_line_color = (0,255,0)
-        beta_rect_color = (0,255,0)
-        beta_rect_h = background_h*0.05/2
-        beta_line_h = background_h*0.05/2
-        beta_rect_upperleft = (10, int(background_h/8-beta_rect_h))
-        self.beta_rect_lowerright = (self.background_w-10, int(background_h/8+beta_rect_h))
-        beta_text = 'Beta'
-        self.beta_textsize = cv2.getTextSize(beta_text, self.font, self.font_size, self.line_thickness)[0]
+        # option for signal
+        self.signal_list = signal_list
+        self.num_signal = len(signal_list)
         
-        # option for yaw rate
-        self.yaw_rate_text_color = (0,255,0)
-        yaw_rate_line_color = (0,255,0)
-        yaw_rate_rect_color = (0,255,0)
-        self.yaw_rate_rect_h = background_h*0.05/2
-        yaw_rate_line_h = background_h*0.05/2
-        yaw_rate_rect_upperleft = (10, int(background_h/8*3-self.yaw_rate_rect_h))
-        yaw_rate_rect_lowerright = (self.background_w-10, int(background_h/8*3+self.yaw_rate_rect_h))
-        yaw_rate_text = 'Yaw rate'
-        self.yaw_rate_textsize = cv2.getTextSize(yaw_rate_text, self.font, self.font_size, self.line_thickness)[0]
+        # option for rect
+        self.w_offset = 10
+        self.h_offset = int((self.h / self.num_signal) // 3)
+        self.font_offset = 15
+        self.line_offset = 8
+        self.value_offset = 120
         
-        # option for roll
-        self.roll_text_color = (0,255,0)
-        roll_line_color = (0,255,0)
-        roll_rect_color = (0,255,0)
-        self.roll_rect_h = background_h*0.05/2
-        roll_line_h = background_h*0.05/2
-        roll_rect_upperleft = (10, int(background_h/8*5-self.roll_rect_h))
-        roll_rect_lowerright = (self.background_w-10, int(background_h/8*5+self.roll_rect_h))
-        roll_text = 'Roll'
-        self.roll_textsize = cv2.getTextSize(roll_text, self.font, self.font_size, self.line_thickness)[0]
+        self.canvas = self.get_background()
         
-        # option for roll rate
-        self.roll_rate_text_color = (0,255,0)
-        roll_rate_line_color = (0,255,0)
-        roll_rate_rect_color = (0,255,0)
-        self.roll_rate_rect_h = background_h*0.05/2
-        roll_rate_line_h = background_h*0.05/2
-        roll_rate_rect_upperleft = (10, int((background_h/8*7)-self.roll_rate_rect_h))
-        roll_rate_rect_lowerright = (self.background_w-10, int((background_h/8*7)+self.roll_rate_rect_h))
-        roll_rate_text = 'Roll rate'
-        self.roll_rate_textsize = cv2.getTextSize(roll_rate_text, self.font, self.font_size, self.line_thickness)[0]
-        
+    def get_background(self):
         # fill zeros for background array
-        img = np.full((background_h, self.background_w, 3), 0, np.uint8)
+        img = np.full((self.h, self.w, 3), 0, np.uint8)
         
-        # draw beta
-        img = cv2.rectangle(img, beta_rect_upperleft, self.beta_rect_lowerright, beta_rect_color, thickness=self.line_thickness)
-        img = cv2.putText(img, 'Beta', (int(self.background_w-self.beta_textsize[0])//2, int(self.beta_rect_lowerright[1]+self.beta_textsize[1]*2)), self.font, self.font_size, self.beta_text_color, thickness=self.line_thickness)
-        img = cv2.putText(img, zero, (int(self.background_w-zero_textsize[0])//2, int(beta_rect_upperleft[1]-zero_textsize[1]*1.5)), self.font, self.font_size, self.beta_text_color, thickness=self.line_thickness)
-        img = cv2.line(img, (int(self.background_w-self.line_thickness)//2, int(beta_rect_upperleft[1]-beta_line_h)), (int(self.background_w-self.line_thickness)//2, int(self.beta_rect_lowerright[1]+beta_line_h)), beta_line_color, thickness=self.line_thickness)
+        for i, signal_name in enumerate(self.signal_list):
+            img = self.draw_bar(img, i, signal_name, self.base_color)
         
-        # draw yaw rate
-        img = cv2.rectangle(img, yaw_rate_rect_upperleft, yaw_rate_rect_lowerright, yaw_rate_rect_color, thickness=self.line_thickness)
-        img = cv2.putText(img, 'Yaw rate', (int(self.background_w-self.yaw_rate_textsize[0])//2, int(yaw_rate_rect_lowerright[1]+self.yaw_rate_textsize[1]*2)), self.font, self.font_size, self.yaw_rate_text_color, thickness=self.line_thickness)
-        img = cv2.putText(img, zero, (int(self.background_w-zero_textsize[0])//2, int(yaw_rate_rect_upperleft[1]-zero_textsize[1]*1.5)), self.font, self.font_size, self.yaw_rate_text_color, thickness=self.line_thickness)
-        img = cv2.line(img, (int(self.background_w-self.line_thickness)//2, int(yaw_rate_rect_upperleft[1]-yaw_rate_line_h)), (int(self.background_w-self.line_thickness)//2, int(yaw_rate_rect_lowerright[1]+yaw_rate_line_h)), yaw_rate_line_color, thickness=self.line_thickness)
+        return np.array(img, dtype=np.uint8)
+            
+    def get_font_size(self, font_face):
+        font_size, _ = cv2.getTextSize(
+                        text=font_face, 
+                        fontFace=self.font, 
+                        fontScale=self.font_size, 
+                        thickness=self.thick,)
+        return font_size
         
-        # draw roll
-        img = cv2.rectangle(img, roll_rect_upperleft, roll_rect_lowerright, roll_rect_color, thickness=self.line_thickness)
-        img = cv2.putText(img, 'Roll', (int(self.background_w-self.roll_textsize[0])//2, int(roll_rect_lowerright[1]+self.roll_textsize[1]*2)), self.font, self.font_size, self.roll_text_color, thickness=self.line_thickness)
-        img = cv2.putText(img, zero, (int(self.background_w-zero_textsize[0])//2, int(roll_rect_upperleft[1]-zero_textsize[1]*1.5)), self.font, self.font_size, self.roll_text_color, thickness=self.line_thickness)
-        img = cv2.line(img, (int(self.background_w-self.line_thickness)//2, int(roll_rect_upperleft[1]-roll_line_h)), (int(self.background_w-self.line_thickness)//2, int(roll_rect_lowerright[1]+roll_line_h)), roll_line_color, thickness=self.line_thickness)
+    def draw_bar(self, img, i, name, color):
+        top = int((i*(self.h / self.num_signal)) + self.h_offset)
+        left = int(self.w_offset)
+        bottom = int(((i+1)*(self.h / self.num_signal)) - self.h_offset)
+        right = int(self.w - self.w_offset)
         
-        #draw roll rate
-        img = cv2.rectangle(img, roll_rate_rect_upperleft, roll_rate_rect_lowerright, roll_rate_rect_color, thickness=self.line_thickness)
-        img = cv2.putText(img, 'Roll rate', (int(self.background_w-self.roll_rate_textsize[0])//2, int(roll_rate_rect_lowerright[1]+self.roll_rate_textsize[1]*2)), self.font, self.font_size, self.roll_rate_text_color, thickness=self.line_thickness)
-        img = cv2.putText(img, zero, (int(self.background_w-zero_textsize[0])//2, int(roll_rate_rect_upperleft[1]-zero_textsize[1]*1.5)), self.font, self.font_size, self.roll_rate_text_color, thickness=self.line_thickness)
-        img = cv2.line(img, (int(self.background_w-self.line_thickness)//2, int(roll_rate_rect_upperleft[1]-roll_rate_line_h)), (int(self.background_w-self.line_thickness)//2, int(roll_rate_rect_lowerright[1]+roll_rate_line_h)), roll_rate_line_color, thickness=self.line_thickness)
+        self.w_box = int(right - left)
+        self.h_box = int(bottom - top)
         
-        self.canvas = np.array(img, dtype=np.uint8)
+        img = cv2.rectangle(img, (left, top), (right, bottom), 
+                            color=color, 
+                            thickness=self.thick)
         
-    def visualize(self): #(self, flag_info, roll_out_info, lateral_out_info, stop_event):
-        font_size = 0.7
+        center = int(self.w // 2)
+        top_line = int(top - self.line_offset)
+        bottom_line = int(bottom + self.line_offset)
+        img = cv2.line(img, 
+                    (center, top_line), (center, bottom_line),
+                    color=color,
+                    thickness=self.thick,
+                    )
         
-        host = 'localhost'
-        port = 8888
-        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        sock.bind((host, port))
-        sock.listen(1)
-        conn, addr = sock.accept()
+        # signal name
+        ## get fontsize
+        font_size = self.get_font_size(name)
+        self.h_font = font_size[1]
+        ## get font position
+        font_position = (int((self.w - font_size[0])//2), int(bottom + (font_size[1] + self.font_offset)))
+        img = cv2.putText(img, 
+                        name, 
+                        font_position,
+                        fontFace=self.font, 
+                        fontScale=self.font_size, 
+                        color=color, 
+                        thickness=self.thick,
+                        )
+        
+        # zero
+        ## get fontsize
+        font_size = self.get_font_size('0')
+        ## get font position
+        font_position = (int((self.w//2 - font_size[0]//2)+1), int(top - self.font_offset))
+        img = cv2.putText(img, 
+                        '0',
+                        font_position,
+                        fontFace=self.font, 
+                        fontScale=self.font_size, 
+                        color=color, 
+                        thickness=self.thick,
+                        )
+        
+        return img
+                
+                
+    def draw_gauge(self, img, i, name, value, color):
+        top = int((i*(self.h / self.num_signal)) + self.h_offset)
+        bottom = int(((i+1)*(self.h / self.num_signal)) - self.h_offset)
+        
+        max_value = self.maxValue[name]
+        cur_w = int((self.w_box * value) / max_value)
+        
+        left = min(int(self.w//2 + cur_w), int(self.w//2))
+        right = max(int(self.w//2 + cur_w), int(self.w//2))
+        
+        img = cv2.rectangle(img, 
+                            (left, top),
+                            (right, bottom),
+                            color=color,
+                            thickness=-1,
+                            )
+        
+        bottom_value = int(bottom + (self.h_font + self.font_offset))
+        left_value = int(self.w//2) + self.value_offset
+        
+        img = cv2.putText(img, 
+                        f"{value:.1f}", 
+                        (left_value, bottom_value),
+                        fontFace=self.font, 
+                        fontScale=self.value_size, 
+                        color=color, 
+                        thickness=self.thick,
+                        )
+        
+        return img
+                    
+    
+    def visualize(self, test=False): 
+        if not test:
+            # set TCP/IP communication
+            host = 'localhost'
+            port = 8888
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock.bind((host, port))
+            sock.listen(1)
+            conn, addr = sock.accept()
 
         while True:
-            
-            recv = conn.recv(1024).decode().split(',')
-            if (recv[0] != 'str') or (recv[-2] != 'end'):
-                pass
+            img = self.get_background()
+            if not test:
+                # get communication
+                recv = conn.recv(1024).decode().split(',')
+                if (recv[0] != 'str') or (recv[-2] != 'end'):
+                    pass
+                
+            else:
+                random_values = [np.random.random()*0.1 for x in range(self.num_signal)]
+                recv = ['str', 'True'] + random_values
 
-            print(recv)
             flag = (recv[1])
-            roll_out = np.array([[recv[2], recv[3]]], dtype=np.float32)
-            lateral_out = np.array([[recv[4], recv[5]]], dtype=np.float32)
+            values = {
+            'Roll':recv[2] * CONVERSION_FACTOR['RAD2DEG'],
+            'RollRate':recv[3] * CONVERSION_FACTOR['RAD2DEG'],
+            'Beta':recv[4] * CONVERSION_FACTOR['RAD2DEG'],
+            'YawRate':recv[5] * CONVERSION_FACTOR['RAD2DEG'],
+            }
             
-            #print(lateral_out.shape)
-            '''
-
-            if flag=='True':
-                roll_a = roll_out[0, 0] * CONVERSION_FACTOR['RAD2DEG']
-                roll_r = roll_out[0, 1] * CONVERSION_FACTOR['RAD2DEG']
-                beta_a = lateral_out[0, 0] * CONVERSION_FACTOR['RAD2DEG']
-                yaw_r = lateral_out[0, 1] * CONVERSION_FACTOR['RAD2DEG']
+            for i, signal_name in enumerate(self.signal_list):
+                value = values[signal_name]
+                img = self.draw_gauge(img, i, signal_name, value, self.gauge_color)
                 
-                img = cv2.rectangle(self.canvas, (int(self.background_w-self.line_thickness)//2, (int(background_h/8-beta_rect_h))), (int(self.background_w-self.line_thickness)//2+(beta_a), int(background_h/8+beta_rect_h)), (0,0,255), -1)
-                img = cv2.putText(img, '0.0', (int(self.background_w+self.beta_textsize[0]+(self.background_w/40))//2, int(self.beta_rect_lowerright[1]+self.beta_textsize[1]*2)), self.font, font_size, self.beta_text_color, thickness=self.line_thickness)
-                
-                img = cv2.rectangle(img, (int(self.background_w-self.line_thickness)//2, (int(background_h/8*3-beta_rect_h))), (int(self.background_w-self.line_thickness)//2-(100), int(background_h/8*3+beta_rect_h)), (0,0,255), -1)
-                img = cv2.putText(img, '0.0', (int(self.background_w+self.yaw_rate_textsize[0]+(self.background_w/40))//2, int(self.beta_rect_lowerright[1]+self.yaw_rate_textsize[1]*2)), self.font, font_size, self.beta_text_color, thickness=self.line_thickness)
-                
-                img = cv2.rectangle(img, (int(self.background_w-self.line_thickness)//2, (int(background_h/8*5-beta_rect_h))), (int(self.background_w-self.line_thickness)//2+(roll_a), int(background_h/8*5+beta_rect_h)), (0,0,255), -1)
-                img = cv2.putText(img, '0.0', (int(self.background_w+self.roll_textsize[0]+(self.background_w/40))//2, int(self.beta_rect_lowerright[1]+self.roll_textsize[1]*2)), self.font, font_size, self.beta_text_color, thickness=self.line_thickness)
-                
-                img = cv2.rectangle(img, (int(self.background_w-self.line_thickness)//2, (int(background_h/8*7-beta_rect_h))), (int(self.background_w-self.line_thickness)//2-(100), int(background_h/8*7+beta_rect_h)), (0,0,255), -1)
-                img = cv2.putText(img, '0.0', (int(self.background_w+self.roll_rate_textsize[0]+(self.background_w/40))//2, int(self.beta_rect_lowerright[1]+self.roll_rate_textsize[1]*2)), self.font, font_size, self.beta_text_color, thickness=self.line_thickness)
-                
-                cv2.imshow('', img)
-            cv2.imshow('', self.canvas)
+            cv2.imshow('', img)
             if cv2.waitKey(1)&0xFF == 27: # 13 is the ASCII code for Enter key
-                sock.close()
+                if not test:
+                    sock.close()
                 break
-            '''
+            
+            time.sleep(self.delay_time)
         sock.close()
         cv2.destroyAllWindows()
         print('[I] Visualization is ended')
 
 if __name__ == '__main__':
-    background_w = 700
-    background_h = 700
-    
-    beta_rect_h = background_h*0.05/2
-    
-    img = Visualize(background_w, background_h).visualize() # .visualize(flag_info, roll_out_info, lateral_out_info, stop_event)
-
-    # img = cv2.rectangle(img, (int(background_w)//2, (int(background_h/8-beta_rect_h))), (background_w-10, int(background_h/8+beta_rect_h)), (0,0,255), -1)
-    # img = cv2.rectangle(img, (int(background_w)//2, (int(background_h/8-beta_rect_h))), (10, int(background_h/8+beta_rect_h)), (0,0,255), -1)
-    
-    # cv2.imshow('', img)
-    # cv2.waitKey(0)
+    visualizer = Visualize()
+    visualizer.visualize(test=True)

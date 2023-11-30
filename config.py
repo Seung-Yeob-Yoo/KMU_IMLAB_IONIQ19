@@ -22,6 +22,13 @@ configParam = {
     'AyMax':+1.0,   #g
 }
 
+maxValue = {
+    'Beta':3.,   #deg
+    'YawRate':15., #deg/s
+    'Roll':5.,   #deg
+    'RollRate':15., #deg/s
+}
+
 vehicleParam = {
     'NE':{
     'StrGearRatio' : 15.004,  # steering wheel angle to front wheel angle
