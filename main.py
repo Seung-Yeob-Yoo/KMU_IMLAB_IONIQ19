@@ -10,7 +10,7 @@ from config import vehicleParam, configParam, CONVERSION_FACTOR
 from discriminator import DiscriminatorCorner
 from generator import Update_CAN
 from inference import inference_roll, inference_lateral
-from visualize import visualize
+from data_send import datasend
 
 def str2bool(v):
     if v.lower() in ('yes', 'true', 't', 'y', '1'):
@@ -256,8 +256,11 @@ def main(vehicle):
                             'args': (ay_info, t_info, roll_info, stop_event)},
                         'InferenceLateral': {'target': inference_lateral,
                             'args': (s_vx_info, t_info, lateral_info, stop_event)},
-                        'Visualize': {'target': visualize,
-                            'args': (flag_info, roll_info, lateral_info, stop_event)},
+                        'Data Send' : {'target': datasend,
+                                       'args' : (flag_info, roll_info, lateral_info, stop_event)
+                                       }
+                        #'Visualize': {'target': visualize,
+                        #    'args': (flag_info, roll_info, lateral_info, stop_event)},
                         }
     
     for key, value in multiproc_settings.items():
