@@ -16,12 +16,14 @@ def datasend(flag_info, roll_info, lateral_info, stop_event):
     
     lat_mem = shared_memory.SharedMemory(name=lateral_info['name'])
     lat = np.ndarray(lateral_info['shape'], dtype=lateral_info['dtype'], buffer=lat_mem.buf)
-    
+    print('aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa')
     while True:
         if stop_event.is_set():
+            sock.close()
             break
         print('lat: ',lat)
-        data = f'{flag},{roll[0][0]},{roll[0][1]},{lat[0][0]},{lat[0][0]}'
+        data = '0'#f'{flag},{roll[0][0]},{roll[0][1]},{lat[0][0]},{lat[0][0]}'
+        print(data)
         sock.send(data.encode())
         
     sock.close()

@@ -113,6 +113,7 @@ class Visualize:
         while True:
             recv = conn.recv(1024).decode().split(',')
             print(recv)
+            continue
             flag = np.bool_(recv[0])
             roll_out = np.array([recv[1], recv[2]], dtype=np.float32)
             lateral_out = np.array([recv[3], recv[4]], dtype=np.float32)
@@ -137,7 +138,7 @@ class Visualize:
                 
                 cv2.imshow('', img)
             cv2.imshow('', self.canvas)
-        
+        sock.close()
         cv2.destroyAllWindows()
         print('[I] Visualization is ended')
 
@@ -148,6 +149,7 @@ if __name__ == '__main__':
     beta_rect_h = background_h*0.05/2
     
     img = Visualize(background_w, background_h).visualize() # .visualize(flag_info, roll_out_info, lateral_out_info, stop_event)
+
     # img = cv2.rectangle(img, (int(background_w)//2, (int(background_h/8-beta_rect_h))), (background_w-10, int(background_h/8+beta_rect_h)), (0,0,255), -1)
     # img = cv2.rectangle(img, (int(background_w)//2, (int(background_h/8-beta_rect_h))), (10, int(background_h/8+beta_rect_h)), (0,0,255), -1)
     
