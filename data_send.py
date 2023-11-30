@@ -21,6 +21,7 @@ def datasend(flag_info, roll_info, lateral_info, stop_event):
         if stop_event.is_set():
             break
         
-        sock.send(np.array([flag, roll, lat]).encode())
+        data = f'{flag}, {roll[0][0]}, {roll[0][1]}, {lat[0][0], {lat[0][1]}}'
+        sock.send(data.encode())
         
     sock.close()
