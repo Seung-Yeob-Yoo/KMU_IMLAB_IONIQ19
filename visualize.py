@@ -111,6 +111,11 @@ class Visualize:
         conn, addr = sock.accept()
         
         while True:
+            while True:
+                key = cv2.waitKey(1)  # Check for key event every 1 millisecond
+                if key == 13:  # 13 is the ASCII code for Enter key
+                    sock.close()
+                    break
             recv = conn.recv(1024).decode().split(',')
             print(recv)
             continue
