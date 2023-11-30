@@ -112,7 +112,7 @@ class Visualize:
         
         while True:
             recv = conn.recv(1024).decode().split(',')
-            
+            print(recv)
             flag = np.bool_(recv[0])
             roll_out = np.array([recv[1], recv[2]], dtype=np.float32)
             lateral_out = np.array([recv[3], recv[4]], dtype=np.float32)
