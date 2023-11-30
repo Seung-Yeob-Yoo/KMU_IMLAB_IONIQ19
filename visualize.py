@@ -113,9 +113,9 @@ class Visualize:
         while True:
             recv = conn.recv(1024).decode().split(',')
             
-            flag = recv[0]
-            roll_out = [[recv[1], recv[2]]]
-            lateral_out = [[recv[3], recv[4]]]
+            flag = np.bool_(recv[0])
+            roll_out = np.array([recv[1], recv[2]], dtype=np.float32)
+            lateral_out = np.array([recv[3], recv[4]], dtype=np.float32)
             
             if flag:
                 roll_a = roll_out[0, 0] * CONVERSION_FACTOR['RAD2DEG']
