@@ -81,7 +81,8 @@ def generate_input(flag_info, ay_info, s_vx_info, ay_cur_info, s_cur_info, vx_cu
     
     t_mem = shared_memory.SharedMemory(name=t_info['name'])
     t = np.ndarray(t_info['shape'], dtype=t_info['dtype'], buffer=t_mem.buf)
-    t[0, 0] = -1
+    # t[0, 0] = -1
+    print(t[0][0])
     
     ay_cur_mem = shared_memory.SharedMemory(name=ay_cur_info['name'])
     ay_cur = np.ndarray(ay_cur_info['shape'], dtype=ay_cur_info['dtype'], buffer=ay_cur_mem.buf)
@@ -177,7 +178,7 @@ def main(vehicle):
     del s_vx_init
     
     # define shared input t
-    t_init = np.ones((1, 1), dtype=np.float32) * -1
+    t_init = np.array([[1.]], dtype=np.float32)
     t_mem = multiprocessing.shared_memory.SharedMemory(create=True, size=t_init.nbytes)
     t_info = {
         'name':t_mem.name,
@@ -186,9 +187,8 @@ def main(vehicle):
     }
     
     t = np.ndarray(t_info['shape'], dtype=t_info['dtype'], buffer=t_mem.buf)
-    t = t_init
+    t[0, 0] = -1
     del t_init
-    print(t)
     
     # define shared output roll
     roll_init = np.zeros((1, 2), dtype=np.float32)
@@ -252,25 +252,23 @@ def main(vehicle):
                                         'args': (vehicle, ay_cur_info, s_cur_info, vx_cur_info, stop_event)},
                         'GeneratorInput': {'target': generate_input,
                                         'args': (flag_info, ay_info, s_vx_info, ay_cur_info, s_cur_info, vx_cur_info, t_info, stop_event)},
-                        'InferenceRoll': {'target': inference_roll,
+                         'InferenceRoll': {'target': inference_roll,
                             'args': (ay_info, t_info, roll_info, stop_event)},
-                        'InferenceLateral': {'target': inference_lateral,
-                            'args': (s_vx_info, t_info, lateral_info, stop_event)},
-                        'Data Send' : {'target': datasend,
+                         'InferenceLateral': {'target': inference_lateral,
+                             'args': (s_vx_info, t_info, lateral_info, stop_event)},
+                         'Data Send' : {'target': datasend,
                                        'args' : (flag_info, roll_info, lateral_info, stop_event)
-                                       }
-                        #'Visualize': {'target': visualize,
-                        #    'args': (flag_info, roll_info, lateral_info, stop_event)},
+                                        }
+                        # 'Visualize': {'target': visualize,
+                           #'args': (flag_info, roll_info, lateral_info, stop_event)},
                         }
     
     for key, value in multiproc_settings.items():
         proc = multiprocessing.Process(target=value['target'], args=value['args'])
         procs.append(proc)
-    print(t)
         
     for proc in procs:
         proc.start()
-    print(t)
     
     time.sleep(3)
     terminate_signal = input("[REQUEST] Press 'Enter' if you want to terminate every processes.\n\n")

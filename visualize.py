@@ -3,9 +3,10 @@ import cv2
 import sys
 import os
 import socket
+import time
 from config import CONVERSION_FACTOR
 
-class Visualize:
+class Visualize: 
     def __init__(self, background_w, background_h):#, flag_info, roll_out_info, lateral_out_info):
         # flag_mem = shared_memory.SharedMemory(name=flag_info['name'])
         # self.flag = np.ndarray(flag_info['shape'], dtype=flag_info['dtype'], buffer=flag_mem.buf)
@@ -109,26 +110,26 @@ class Visualize:
         sock.bind((host, port))
         sock.listen(1)
         conn, addr = sock.accept()
-        
+
         while True:
-            key = cv2.waitKey(1) # Check for key event every 1 millisecond
-            if key == 13: # 13 is the ASCII code for Enter key
-                sock.close()
-                break
+            
             recv = conn.recv(1024).decode().split(',')
+            if (recv[0] != 'str') or (recv[-2] != 'end'):
+                pass
+
             print(recv)
-            flag = (recv[0])
-            roll_out = np.array([[recv[1], recv[2]]], dtype=np.float32)
-            lateral_out = np.array([[recv[3], recv[4]]], dtype=np.float32)
+            flag = (recv[1])
+            roll_out = np.array([[recv[2], recv[3]]], dtype=np.float32)
+            lateral_out = np.array([[recv[4], recv[5]]], dtype=np.float32)
             
             #print(lateral_out.shape)
-            
+            '''
+
             if flag=='True':
                 roll_a = roll_out[0, 0] * CONVERSION_FACTOR['RAD2DEG']
-                roll_r = roll_out[0, 1]
-                beta_a = lateral_out[0, 0]* CONVERSION_FACTOR['RAD2DEG']
-                yaw_r = lateral_out[0, 1]
-                print(roll_a, roll_r, type(beta_a), yaw_r)
+                roll_r = roll_out[0, 1] * CONVERSION_FACTOR['RAD2DEG']
+                beta_a = lateral_out[0, 0] * CONVERSION_FACTOR['RAD2DEG']
+                yaw_r = lateral_out[0, 1] * CONVERSION_FACTOR['RAD2DEG']
                 
                 img = cv2.rectangle(self.canvas, (int(self.background_w-self.line_thickness)//2, (int(background_h/8-beta_rect_h))), (int(self.background_w-self.line_thickness)//2+(beta_a), int(background_h/8+beta_rect_h)), (0,0,255), -1)
                 img = cv2.putText(img, '0.0', (int(self.background_w+self.beta_textsize[0]+(self.background_w/40))//2, int(self.beta_rect_lowerright[1]+self.beta_textsize[1]*2)), self.font, font_size, self.beta_text_color, thickness=self.line_thickness)
@@ -144,6 +145,10 @@ class Visualize:
                 
                 cv2.imshow('', img)
             cv2.imshow('', self.canvas)
+            if cv2.waitKey(1)&0xFF == 27: # 13 is the ASCII code for Enter key
+                sock.close()
+                break
+            '''
         sock.close()
         cv2.destroyAllWindows()
         print('[I] Visualization is ended')
