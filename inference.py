@@ -100,7 +100,7 @@ def inference_lateral(u_info, t_info, x_info, stop_event):
         output_ = model([u.copy(), t.copy()])
         inf_time_list.append(time.time() - start_time)
         inf_time_arr = np.array(inf_time_list)
-        np.save(os.path.join(os.path.dirname(__file__), 'lateral_inf_time.npy'), inf_time_arr)
+        np.save(os.path.join(os.path.dirname(__file__), 'log','lateral_inf_time.npy'), inf_time_arr)
         
         x[:, :] = output_.numpy().copy() # for origin model
         # x[:, :] = output_.copy() # for tflite model
