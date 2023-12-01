@@ -118,6 +118,42 @@ def get_DeepONet_Roll(num_nodes, activation):
     
     return model
 
+def get_DeepONet_Lateral(num_nodes, activation):
+    input_b = tf.keras.Input(shape=(2, 500))
+    input_t = tf.keras.Input(shape=(1,))
+    hidden_s = input_b[:, 0, :] / 10.0
+    hidden_vx = input_b[:, 1, :] / 41.66666666666667
+    hidden_s = Dense(num_nodes, activation=activation, name='branch_0_0')(hidden_s)
+    hidden_s = Dense(num_nodes, activation=activation, name='branch_1_0')(hidden_s)
+    hidden_s = Dense(num_nodes, activation=activation, name='branch_2_0')(hidden_s)
+    hidden_s = Dense(num_nodes, activation=activation, name='branch_3_0')(hidden_s)
+    hidden_s = Dense(num_nodes, activation=activation, name='branch_4_0')(hidden_s)
+    hidden_s = Dense(num_nodes, activation=activation, name='branch_5_0')(hidden_s)
+    output_s_1 = Dense(num_nodes, activation=activation, name='branch_out_0_0')(hidden_s)
+    output_s_2 = Dense(num_nodes, activation=activation, name='branch_out_1_0')(hidden_s)
+    hidden_vx = Dense(num_nodes, activation=activation, name='branch_0_1')(hidden_vx)
+    hidden_vx = Dense(num_nodes, activation=activation, name='branch_1_1')(hidden_vx)
+    hidden_vx = Dense(num_nodes, activation=activation, name='branch_2_1')(hidden_vx)
+    hidden_vx = Dense(num_nodes, activation=activation, name='branch_3_1')(hidden_vx)
+    hidden_vx = Dense(num_nodes, activation=activation, name='branch_4_1')(hidden_vx)
+    hidden_vx = Dense(num_nodes, activation=activation, name='branch_5_1')(hidden_vx)
+    output_vx_1 = Dense(num_nodes, activation=activation, name='branch_out_0_1')(hidden_vx)
+    output_vx_2 = Dense(num_nodes, activation=activation, name='branch_out_1_1')(hidden_vx)
+    hidden_t = input_t / 5.0
+    hidden_t = Dense(num_nodes, activation=activation, name='trunk_0')(hidden_t)
+    hidden_t = Dense(num_nodes, activation=activation, name='trunk_1')(hidden_t)
+    hidden_t = Dense(num_nodes, activation=activation, name='trunk_2')(hidden_t)
+    hidden_t = Dense(num_nodes, activation=activation, name='trunk_3')(hidden_t)
+    hidden_t = Dense(num_nodes, activation=activation, name='trunk_4')(hidden_t)
+    hidden_t = Dense(num_nodes, activation=activation, name='trunk_5')(hidden_t)
+    dot_product_1 = tf.keras.layers.Dot(axes=1)([tf.multiply(output_s_1, output_vx_1), hidden_t])
+    dot_product_2 = tf.keras.layers.Dot(axes=1)([tf.multiply(output_s_2, output_vx_2), hidden_t])
+    output_1 = BiasLayer(name='bias_0')(dot_product_1)
+    output_2 = BiasLayer(name='bias_1')(dot_product_2)
+    output = Concatenate()([output_1, output_2])
+    model = tf.keras.Model(inputs=[input_b, input_t], outputs=output)
+    return model
+
 import os
 import yaml
 from glob import glob
