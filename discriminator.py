@@ -72,15 +72,15 @@ class DiscriminatorCorner(object):
         flag = True
         if steer_ang < self.minStrAng_deg or steer_ang > self.maxStrAng_deg:
             flag = False
-            # print(f">>>>> Out of range (Steer Angle): {steer_ang:.2f}", end='\r')
+            print(f">>>>> Out of range (Steer Angle): {steer_ang:.2f}")
             
         if veh_spd < self.minVehSpd_kph or veh_spd > self.maxVehSpd_kph:
             flag = False
-            # print(f">>>>> Out of range (Velocity): {veh_spd:.2f}", end='\r')
+            print(f">>>>> Out of range (Velocity): {veh_spd:.2f}")
         
         if ay < self.minAy_g or ay > self.maxAy_g:
             flag = False
-            # print(f">>>>> Out of range (Lateral Acceleration: {ay:.2f})",  end='\r')
+            print(f">>>>> Out of range (Lateral Acceleration: {ay:.2f})")
             
         return flag
 

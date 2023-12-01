@@ -270,7 +270,7 @@ def main(vehicle):
     for proc in procs:
         proc.start()
     
-    time.sleep(3)
+    time.sleep(5)
     terminate_signal = input("[REQUEST] Press 'Enter' if you want to terminate every processes.\n\n")
     while terminate_signal != '':
         print("[REQUEST] Invalid input! Press 'Enter'")

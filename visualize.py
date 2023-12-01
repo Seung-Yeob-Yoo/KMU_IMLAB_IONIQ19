@@ -9,7 +9,7 @@ from config import CONVERSION_FACTOR, maxValue
 class Visualize: 
     def __init__(self, signal_list=['Beta', 'YawRate', 'Roll', 'RollRate'], w=700, h=700):
         # option for drawing
-        self.delay_time = 0.01
+        self.delay_time = 0.05
         
         self.maxValue = maxValue
         
@@ -162,7 +162,7 @@ class Visualize:
                 # get communication
                 recv = conn.recv(1024).decode().split(',')
                 if (recv[0] != 'str') or (recv[-2] != 'end'):
-                    pass
+                    continue
                 
             else:
                 random_values = [np.random.random()*0.1 for x in range(self.num_signal)]
@@ -170,10 +170,10 @@ class Visualize:
 
             flag = (recv[1])
             values = {
-            'Roll':recv[2] * CONVERSION_FACTOR['RAD2DEG'],
-            'RollRate':recv[3] * CONVERSION_FACTOR['RAD2DEG'],
-            'Beta':recv[4] * CONVERSION_FACTOR['RAD2DEG'],
-            'YawRate':recv[5] * CONVERSION_FACTOR['RAD2DEG'],
+            'Roll':np.float32(recv[2]) * CONVERSION_FACTOR['RAD2DEG'],
+            'RollRate':np.float32(recv[3]) * CONVERSION_FACTOR['RAD2DEG'],
+            'Beta':np.float32(recv[4]) * CONVERSION_FACTOR['RAD2DEG'],
+            'YawRate':np.float32(recv[5]) * CONVERSION_FACTOR['RAD2DEG'],
             }
             
             for i, signal_name in enumerate(self.signal_list):
@@ -181,7 +181,7 @@ class Visualize:
                 img = self.draw_gauge(img, i, signal_name, value, self.gauge_color)
                 
             cv2.imshow('', img)
-            if cv2.waitKey(1)&0xFF == 27: # 13 is the ASCII code for Enter key
+            if cv2.waitKey(1)&0xFF == 13: # 13 is the ASCII code for Enter key
                 if not test:
                     sock.close()
                 break
@@ -193,4 +193,4 @@ class Visualize:
 
 if __name__ == '__main__':
     visualizer = Visualize()
-    visualizer.visualize(test=True)
+    visualizer.visualize(test=False)

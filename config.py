@@ -23,8 +23,8 @@ configParam = {
 }
 
 maxValue = {
-    'Beta':3.,   #deg
-    'YawRate':15., #deg/s
+    'Beta':2.,   #deg
+    'YawRate':10., #deg/s
     'Roll':5.,   #deg
     'RollRate':15., #deg/s
 }
