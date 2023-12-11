@@ -7,7 +7,7 @@ import time
 from config import CONVERSION_FACTOR, maxValue
 
 class Visualize: 
-    def __init__(self, signal_list=['Beta', 'YawRate', 'Roll', 'RollRate'], w=700, h=700):
+    def __init__(self, signal_list=['Beta', 'YawRate', 'Roll', 'RollRate'], w=1000, h=1000):
         # option for drawing
         self.delay_time = 0.05
         
@@ -20,8 +20,8 @@ class Visualize:
         
         ## font
         self.font = cv2.FONT_HERSHEY_COMPLEX
-        self.font_size = 700/(self.w*self.h)**0.5
-        self.value_size = self.font_size * 0.8
+        self.font_size = 1.5
+        self.value_size = self.font_size * 1.
         
         # thickness
         self.thick = 2

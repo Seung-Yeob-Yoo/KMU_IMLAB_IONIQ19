@@ -136,6 +136,8 @@ class DiscriminatorCorner(object):
                 # if self.flag and ((time() - prev_time) >= self.samplint_time):
                     # self.time_from_init += self.sampling_time
             prev_time = time()
+            
+
             # print(self.flag)
             #print(prev_time - str_)
             # yield self.time_from_init

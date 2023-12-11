@@ -41,7 +41,8 @@ def inference_roll(u_info, t_info, x_info, stop_event):
     model = TFlite_model(model_path) # for tflite model
 
     prev_t = np.array([[-1.]], dtype=np.float32)
-
+    
+    inf_time_list = []
     while True:
         if stop_event.is_set():
             break
@@ -57,7 +58,11 @@ def inference_roll(u_info, t_info, x_info, stop_event):
         output_ = model([u.copy(), t.copy()])
         # x[:, :] = output_.numpy().copy() # for origin model
         x[:, :] = output_.copy() # for tflite model
-            
+        
+        inf_time_list.append(time.time())
+        inf_time_arr = np.array(inf_time_list)
+        np.save(os.path.join(os.path.dirname(__file__), 'log', 'inf_time_roll'), inf_time_arr)
+        
         prev_t = cur_t.copy()
 
     u_mem.close()
@@ -76,15 +81,16 @@ def inference_lateral(u_info, t_info, x_info, stop_event):
     
     model_path = os.path.join(os.path.dirname(__file__), 'lateral_model')
 
-    model = get_DeepONet_Lateral(
-        num_nodes=32,
-        activation='tanh',
-    )
-    # model = TFlite_model(model_path) # for tflite model
+    # model = get_DeepONet_Lateral(
+        # num_nodes=32,
+        # activation='tanh',
+    # )
+    model = TFlite_model(model_path) # for tflite model
 
     prev_t = np.array([[-1.]], dtype=np.float32)
 
     inf_time_list=[]
+
     while True:
         if stop_event.is_set():
             break
@@ -96,14 +102,14 @@ def inference_lateral(u_info, t_info, x_info, stop_event):
                 x[0][1] = 0.
             cur_t = t[0, 0].copy()
             
-        start_time = time.time()
         output_ = model([u.copy(), t.copy()])
-        inf_time_list.append(time.time() - start_time)
-        inf_time_arr = np.array(inf_time_list)
-        np.save(os.path.join(os.path.dirname(__file__), 'log','lateral_inf_time.npy'), inf_time_arr)
         
-        x[:, :] = output_.numpy().copy() # for origin model
-        # x[:, :] = output_.copy() # for tflite model
+        # x[:, :] = output_.numpy().copy() # for origin model
+        x[:, :] = output_.copy() # for tflite model
+        
+        inf_time_list.append(time.time())
+        inf_time_arr = np.array(inf_time_list)
+        np.save(os.path.join(os.path.dirname(__file__), 'log', 'inf_time_lateral'), inf_time_arr)
         
         prev_t = cur_t.copy()
 

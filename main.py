@@ -95,6 +95,7 @@ def generate_input(flag_info, ay_info, s_vx_info, ay_cur_info, s_cur_info, vx_cu
     vx_cur = np.ndarray(vx_cur_info['shape'], dtype=vx_cur_info['dtype'], buffer=vx_cur_mem.buf)
     
     get_time = 0.0
+    times = []
     
     while True:
         if stop_event.is_set():
@@ -103,6 +104,11 @@ def generate_input(flag_info, ay_info, s_vx_info, ay_cur_info, s_cur_info, vx_cu
             pass
         # print(flag, t, end='\r')        
         if flag:
+            times.append(time.time())
+            times_array = np.array(times)
+            np.save(os.path.join(os.path.dirname(__file__), 'log', 'generate.npy'), times_array)
+
+        
             if t[0, 0] == -1:
                 # print("RRRRRRRRRRRRRRRRRRRRR")
                 # u_cur, t_idx, t_cur = generator.reset()
