@@ -5,6 +5,7 @@ import argparse
 import numpy as np
 import sys
 import time
+import platform
 
 from config import vehicleParam, configParam, CONVERSION_FACTOR
 from discriminator import DiscriminatorCorner
@@ -301,5 +302,7 @@ def main(vehicle):
     vx_cur_mem.unlick()
 
 if __name__ == '__main__':
+    if platform.system() == 'Linux':
+        os.system(f"sudo chmod 777 /dev/ttyS0")
     vehicle = 'IONIQ19'
     main(vehicle)
