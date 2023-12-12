@@ -59,27 +59,27 @@ can_msg_list = {
         ],
     1:
         [
-        '',
-        '',
-        '',
+        'CLU_01_20ms',
+        'SAS_01_10ms',
+        'IMU_01_10ms',
         ],
 }
 
 signal_veh_spd = {
     0:'CR_Ems_VehSpd_Kmh',
-    1:'',
+    1:'CLU_DisSpdValKPH',
 }
 signal_steer_ang = {
     0:'SAS_Angle',
-    1:'',
+    1:'SAS_AnglVal',
 }
 signal_steer_spd = {
     0:'SAS_Speed',
-    1:'',
+    1:'SAS_SpdVal',
 }
 signal_ay = {
     0:'LAT_ACCEL',
-    1:'',
+    1:'IMU_LatAccelVal',
 }
 
 StrGearRatio = {
@@ -91,5 +91,5 @@ StrGearRatio = {
 import os
 can_db_path = {
     0:os.path.join(os.path.dirname(__file__), 'dbc', 'C_CAN.dbc'),
-    1:'',
+    1:os.path.join(os.path.dirname(__file__), 'dbc', 'NE1_2021_FD_C_231212_KMU.dbc'),
 }
