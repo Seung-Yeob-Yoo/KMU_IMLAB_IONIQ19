@@ -1,9 +1,8 @@
-from config import configParam
+from config import configParam, can_msg_list, signal_ay, signal_steer_ang, signal_steer_spd
 from can_parser import CAN_parser
-from time import time
 
 class DiscriminatorCorner(object):
-    def __init__(self, vehicle='IONIQ19'):
+    def __init__(self, vehicle_id=0):
         # Criteria for Corner
         self.steerAngleOn = configParam['StrAngOn']
         self.steerAngleOff =configParam['StrAngOff']
@@ -34,19 +33,11 @@ class DiscriminatorCorner(object):
         self.check_info()
         
         # Set CAN Parser
-        if vehicle=='IONIQ19':
-            self.can_msg_list = ['HEV_PC4', 'SAS11', 'ESP12'] # KMU
-            self.signal_veh_spd = 'CR_Ems_VehSpd_Kmh'
-            self.signal_steer_ang = 'SAS_Angle'
-            self.signal_steer_spd = 'SAS_Speed'
-            self.signal_ay = 'LAT_ACCEL'
-        elif vehicle=='NE':
-            raise NotImplementedError
-            # self.can_msg_list = [] # HMC
-            # self.signal_veh_spd = ''
-            # self.signal_steer_ang = ''
-            # self.signal_steer_spd = ''
-            # self.signal_ay = ''
+        self.can_msg_list = can_msg_list[vehicle_id] # KMU
+        self.signal_veh_spd = signal_steer_ang[vehicle_id]
+        self.signal_steer_ang = signal_steer_spd[vehicle_id]
+        self.signal_steer_spd = signal_steer_spd[vehicle_id]
+        self.signal_ay = signal_ay[vehicle_id]
         
         self.can_signal_list = [self.signal_veh_spd, self.signal_steer_ang, self.signal_steer_spd, self.signal_ay]
         
@@ -122,8 +113,6 @@ class DiscriminatorCorner(object):
         
     
     def run(self):
-        prev_time = 0.0
-
         for data_dic, data_time in self.can_parser.get_can_data(self.can_signal_list):
             for k, v in data_dic.items():
                 self.latest_signal_dic.update({k:v})
@@ -131,28 +120,26 @@ class DiscriminatorCorner(object):
             if len(self.latest_signal_dic.keys()) < len(self.can_signal_list):
                 continue
             
-            # if (prev_time != 0.0) and ((time() - prev_time) < self.sampling_time):
-                # continue
-            
-            # if (prev_time != 0.0) and ((time() - prev_time) > self.sampling_time*2.0):
-                # raise TimeoutError(f"Operation timed out, {time()-prev_time}")
-            
             self.discriminate()
 
-            # if (self.flag) and (self.time_from_init == -1):
-                # self.time_from_init = 0.0
-            # else:
-                # if self.flag and ((time() - prev_time) >= self.samplint_time):
-                    # self.time_from_init += self.sampling_time
-            prev_time = time()
             
-
-            # print(self.flag)
-            #print(prev_time - str_)
-            # yield self.time_from_init
             yield self.flag
             
-        
+
+from multiprocessing import shared_memory
+import numpy as np
+def run_discriminator(vehicle_id, flag_info, stop_event):
+    flag_mem = shared_memory.SharedMemory(name=flag_info['name'])
+    flag = np.ndarray(flag_info['shape'], dtype=flag_info['dtype'], buffer=flag_mem.buf)
+
+    discriminator = DiscriminatorCorner(vehicle_id=vehicle_id)
+    
+    for corner_flag in discriminator.run():
+        if stop_event.is_set():
+            break
+        flag[0] = corner_flag
+    
+    flag_mem.close()
         
 if __name__ == "__main__":
     discriminator = DiscriminatorCorner()

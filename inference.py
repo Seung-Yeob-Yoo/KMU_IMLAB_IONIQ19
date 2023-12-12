@@ -1,5 +1,4 @@
 import tensorflow as tf
-from model import get_origin_model, get_DeepONet_Lateral
 from multiprocessing import shared_memory
 import numpy as np
 import os
@@ -37,7 +36,6 @@ def inference_roll(u_info, t_info, x_info, stop_event):
     
     model_path = os.path.join(os.path.dirname(__file__), 'roll_model')
 
-    # model = get_origin_model(model_path) # for origin model
     model = TFlite_model(model_path) # for tflite model
 
     prev_t = np.array([[-1.]], dtype=np.float32)
@@ -47,7 +45,6 @@ def inference_roll(u_info, t_info, x_info, stop_event):
         if stop_event.is_set():
             break
         
-        # print(t[0, 0])
         cur_t = t[0, 0].copy()
         while (cur_t == prev_t) or (cur_t == -1):
             if cur_t == -1:
@@ -56,7 +53,6 @@ def inference_roll(u_info, t_info, x_info, stop_event):
             cur_t = t[0, 0].copy()
         
         output_ = model([u.copy(), t.copy()])
-        # x[:, :] = output_.numpy().copy() # for origin model
         x[:, :] = output_.copy() # for tflite model
         
         inf_time_list.append(time.time())
@@ -81,10 +77,6 @@ def inference_lateral(u_info, t_info, x_info, stop_event):
     
     model_path = os.path.join(os.path.dirname(__file__), 'lateral_model')
 
-    # model = get_DeepONet_Lateral(
-        # num_nodes=32,
-        # activation='tanh',
-    # )
     model = TFlite_model(model_path) # for tflite model
 
     prev_t = np.array([[-1.]], dtype=np.float32)
@@ -104,7 +96,6 @@ def inference_lateral(u_info, t_info, x_info, stop_event):
             
         output_ = model([u.copy(), t.copy()])
         
-        # x[:, :] = output_.numpy().copy() # for origin model
         x[:, :] = output_.copy() # for tflite model
         
         inf_time_list.append(time.time())

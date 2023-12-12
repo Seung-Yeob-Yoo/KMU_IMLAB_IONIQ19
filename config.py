@@ -29,21 +29,67 @@ maxValue = {
     'RollRate':15., #deg/s
 }
 
-vehicleParam = {
-    'NE':{
-    'StrGearRatio' : 15.004,  # steering wheel angle to front wheel angle
-    },
-    'JW':{
-    'StrGearRatio' : 13.,  # steering wheel angle to front wheel angle
-    },
-    'IONIQ19':{
-    'StrGearRatio' : 14.7,  # steering wheel angle to front wheel angle
-    },
-}
-
 import numpy as np
 CONVERSION_FACTOR = {}
 CONVERSION_FACTOR['KPH2MPS'] = 1 / 3.6
 CONVERSION_FACTOR['RAD2DEG'] = 180 / np.pi
 CONVERSION_FACTOR['DEG2RAD'] = np.pi / 180
 CONVERSION_FACTOR['G2MPS2'] = 9.8665
+
+available_vehicles = {
+    'IONIQ19':0, 
+    'NE':1,
+}
+available_communications = {
+    'UART':0,
+    'TCP/IP':1,
+}
+
+com_port = {
+    0:'/dev/ttyS0',
+    1:8888,
+}
+
+can_msg_list = {
+    0:
+        [
+        'HEV_PC4', 
+        'SAS11', 
+        'ESP12'
+        ],
+    1:
+        [
+        '',
+        '',
+        '',
+        ],
+}
+
+signal_veh_spd = {
+    0:'CR_Ems_VehSpd_Kmh',
+    1:'',
+}
+signal_steer_ang = {
+    0:'SAS_Angle',
+    1:'',
+}
+signal_steer_spd = {
+    0:'SAS_Speed',
+    1:'',
+}
+signal_ay = {
+    0:'LAT_ACCEL',
+    1:'',
+}
+
+StrGearRatio = {
+    0:14.7,
+    1:15.004,
+    # 2:13.,  #JW
+}
+
+import os
+can_db_path = {
+    0:os.path.join(os.path.dirname(__file__), 'dbc', 'C_CAN.dbc'),
+    1:'',
+}
