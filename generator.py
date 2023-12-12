@@ -5,12 +5,22 @@ from config import configParam
 class Update_CAN(object):
     def __init__(self, vehicle='IONIQ19'):
         # Set CAN Parser
-        self.can_msg_list = ['HEV_PC4', 'SAS11', 'ESP12'] # KMU
-        self.can_signal_list = [
-            'LAT_ACCEL',
-            'CR_Ems_VehSpd_Kmh',
-            'SAS_Speed',
-        ]
+        if vehicle=='IONIQ19':
+            self.can_msg_list = ['HEV_PC4', 'SAS11', 'ESP12'] # KMU
+            self.can_signal_list = [
+                'LAT_ACCEL',
+                'CR_Ems_VehSpd_Kmh',
+                'SAS_Speed',
+            ]
+        elif vehicle=='NE':
+            raise NotImplementedError
+            self.can_msg_list = [] # KMU
+            self.can_signal_list = [
+                '',
+                '',
+                '',
+            ]
+            pass
         
         self.can_parser = CAN_parser(
                 vehicle=vehicle,

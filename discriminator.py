@@ -34,11 +34,20 @@ class DiscriminatorCorner(object):
         self.check_info()
         
         # Set CAN Parser
-        self.can_msg_list = ['HEV_PC4', 'SAS11', 'ESP12'] # KMU
-        self.signal_veh_spd = 'CR_Ems_VehSpd_Kmh'
-        self.signal_steer_ang = 'SAS_Angle'
-        self.signal_steer_spd = 'SAS_Speed'
-        self.signal_ay = 'LAT_ACCEL'
+        if vehicle=='IONIQ19':
+            self.can_msg_list = ['HEV_PC4', 'SAS11', 'ESP12'] # KMU
+            self.signal_veh_spd = 'CR_Ems_VehSpd_Kmh'
+            self.signal_steer_ang = 'SAS_Angle'
+            self.signal_steer_spd = 'SAS_Speed'
+            self.signal_ay = 'LAT_ACCEL'
+        elif vehicle=='NE':
+            raise NotImplementedError
+            # self.can_msg_list = [] # HMC
+            # self.signal_veh_spd = ''
+            # self.signal_steer_ang = ''
+            # self.signal_steer_spd = ''
+            # self.signal_ay = ''
+        
         self.can_signal_list = [self.signal_veh_spd, self.signal_steer_ang, self.signal_steer_spd, self.signal_ay]
         
         self.can_parser = CAN_parser(

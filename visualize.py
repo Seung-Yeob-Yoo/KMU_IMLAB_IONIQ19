@@ -4,7 +4,21 @@ import sys
 import os
 import socket
 import time
+import serial
+import argparse
 from config import CONVERSION_FACTOR, maxValue
+
+def str2bool(v):
+    if v.lower() in ('yes', 'true', 't', 'y', '1'):
+        return True
+    elif v.lower() in ('no', 'false', 'f', 'n', '0'):
+        return False
+    else:
+        raise argparse.ArgumentTypeError('Boolean value expected.')
+    
+parser = argparse.ArgumentParser(description='Inference environment setup')
+parser.add_argument('--port', '-p', type=str, default="/dev/ttyTHS1", help='port name for serial communication [RX]')
+args = parser.parse_args()
 
 class Visualize: 
     def __init__(self, signal_list=['Beta', 'YawRate', 'Roll', 'RollRate'], w=1000, h=1000):
@@ -146,29 +160,45 @@ class Visualize:
         return img
                     
     
-    def visualize(self, test=False): 
+    def visualize(self, test=False, uart=False): 
         if not test:
-            # set TCP/IP communication
-            host = 'localhost'
-            port = 8888
-            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            sock.bind((host, port))
-            sock.listen(1)
-            conn, addr = sock.accept()
+            if uart:
+                # Jetson nano 수신부
+                jet_rx = serial.Serial(
+                    port=args.port,
+                    baudrate=115200,
+                    bytesize=serial.EIGHTBITS,
+                    parity=serial.PARITY_NONE,
+                    stopbits=serial.STOPBITS_ONE,
+                )
+            else:
+                # set TCP/IP communication
+                host = 'localhost'
+                port = 8888
+                sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                sock.bind((host, port))
+                sock.listen(1)
+                conn, addr = sock.accept()
 
         while True:
             img = self.get_background()
             if not test:
-                # get communication
-                recv = conn.recv(1024).decode().split(',')
-                if (recv[0] != 'str') or (recv[-2] != 'end'):
-                    continue
+                if uart:
+                    #Receive data
+                    data_size= 16
+                    received_data = jet_rx.read(data_size) 
+                    recv = np.frombuffer(received_data, dtype=np.float32).reshape(4)
+                else:
+                    # get communication
+                    recv = conn.recv(1024).decode().split(',')
+                    if (recv[0] != 'str') or (recv[-2] != 'end'):
+                        continue
                 
             else:
                 random_values = [np.random.random()*0.1 for x in range(self.num_signal)]
                 recv = ['str', 'True'] + random_values
 
-            flag = (recv[1])
+            # flag = (recv[1])
             values = {
             'Roll':np.float32(recv[2]) * CONVERSION_FACTOR['RAD2DEG'],
             'RollRate':np.float32(recv[3]) * CONVERSION_FACTOR['RAD2DEG'],

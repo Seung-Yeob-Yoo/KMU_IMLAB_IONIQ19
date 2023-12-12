@@ -20,14 +20,14 @@ def str2bool(v):
         return False
     else:
         raise argparse.ArgumentTypeError('Boolean value expected.')
-'''
+
 parser = argparse.ArgumentParser(description='Inference environment setup')
 parser.add_argument('--vehicle', '-v', type=str, required=True,
                     help='Which vehicle does the running vehicle belong to? (IONIQ19 or NE)')
-parser.add_argument('--isSave', type=str2bool, default=False,
-                    help='Save the inference results')
+parser.add_argument('--uart', '-u', type=str2bool, required=False, default=False,
+                    help='Which communication method use? (UART or TCP/IP)')
 args = parser.parse_args()
-'''
+
 
 def run_discriminator(vehicle, flag_info, stop_event):
     flag_mem = shared_memory.SharedMemory(name=flag_info['name'])
@@ -264,7 +264,7 @@ def main(vehicle):
                          'InferenceLateral': {'target': inference_lateral,
                              'args': (s_vx_info, t_info, lateral_info, stop_event)},
                          'Data Send' : {'target': datasend,
-                                       'args' : (flag_info, roll_info, lateral_info, stop_event)
+                                       'args' : (flag_info, roll_info, lateral_info, stop_event, args.uart)
                                         }
                         # 'Visualize': {'target': visualize,
                            #'args': (flag_info, roll_info, lateral_info, stop_event)},
@@ -310,5 +310,6 @@ def main(vehicle):
 if __name__ == '__main__':
     if platform.system() == 'Linux':
         os.system(f"sudo chmod 777 /dev/ttyS0")
-    vehicle = 'IONIQ19'
+    # vehicle = 'IONIQ19'
+    vehicle = args.vehicle
     main(vehicle)
