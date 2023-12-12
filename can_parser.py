@@ -1,28 +1,25 @@
 import os
-import sys
 import can
 import cantools
 import csv
+from config import can_db_path
 
 class CAN_parser:
-    def __init__(self, vehicle='IONIQ19', can_msg_list=[]):
-        if vehicle == 'NE':
-            raise NotImplementedError
-            os.system("sudo ip link set can0 up type can bitrate 500000 dbitrate 2000000 restart-ms 1000 berr-reporting on fd on sample-point .8 dsample-point .75")
-            self.can_bus = can.interface.Bus(channel = 'can0', bustype = 'socketcan',bitrate=500000, data_bitrate=2000000, fd=True, can_filters=self.filters) # HMC NE
-        elif vehicle == 'IONIQ19':
+    def __init__(self, vehicle_id=0, can_msg_list=[]):
+        if vehicle_id == 0:
             os.system("sudo ip link set can0 up type can bitrate 500000")
+        elif vehicle_id == 1:
+            os.system("sudo ip link set can0 up type can bitrate 500000 dbitrate 2000000 restart-ms 1000 berr-reporting on fd on sample-point .8 dsample-point .75")
         else:
-            raise NameError("Vehicle name is not correct.")
+            raise NotImplementedError
 
-        self.can_db_path = os.path.join(os.path.dirname(__file__), 'dbc', 'C_CAN.dbc')
+        self.can_db_path = can_db_path[vehicle_id]
 
         if not os.path.isfile(self.can_db_path):
             raise FileNotFoundError(self.can_db_path)
         self.CAN_db = cantools.database.load_file(self.can_db_path)
 
         self.can_msg_list = can_msg_list
-        #self.can_signal_list = can_signal_list
         
         for msg in self.can_msg_list:
             if not msg in [can_msg.name for can_msg in self.CAN_db.messages]:
@@ -42,7 +39,10 @@ class CAN_parser:
         
         self.filters = [{"can_id" : frame_id, "can_mask": 0xFFFFFFF} for frame_id in self.frame_ids]
             
-        self.can_bus = can.interface.Bus(channel = 'can0', bustype = 'socketcan', can_filters=self.filters) # KMU
+        if vehicle_id == 0:
+            self.can_bus = can.interface.Bus(channel = 'can0', bustype = 'socketcan', can_filters=self.filters) # KMU
+        elif vehicle_id == 1:
+            self.can_bus = can.interface.Bus(channel = 'can0', bustype = 'socketcan', bitrate=500000, data_bitrate=2000000, fd=True, can_filters=self.filters) # HMC NE
 
             
     def get_can_data(self, can_signal_list):
