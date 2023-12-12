@@ -40,7 +40,7 @@ def inference_roll(u_info, t_info, x_info, stop_event):
 
     prev_t = np.array([[-1.]], dtype=np.float32)
     
-    inf_time_list = []
+    # inf_time_list = []
     while True:
         if stop_event.is_set():
             break
@@ -55,9 +55,9 @@ def inference_roll(u_info, t_info, x_info, stop_event):
         output_ = model([u.copy(), t.copy()])
         x[:, :] = output_.copy() # for tflite model
         
-        inf_time_list.append(time.time())
-        inf_time_arr = np.array(inf_time_list)
-        np.save(os.path.join(os.path.dirname(__file__), 'log', 'inf_time_roll'), inf_time_arr)
+        # inf_time_list.append(time.time())
+        # inf_time_arr = np.array(inf_time_list)
+        # np.save(os.path.join(os.path.dirname(__file__), 'log', 'inf_time_roll'), inf_time_arr)
         
         prev_t = cur_t.copy()
 
@@ -81,8 +81,7 @@ def inference_lateral(u_info, t_info, x_info, stop_event):
 
     prev_t = np.array([[-1.]], dtype=np.float32)
 
-    inf_time_list=[]
-
+    # inf_time_list=[]
     while True:
         if stop_event.is_set():
             break
@@ -98,9 +97,9 @@ def inference_lateral(u_info, t_info, x_info, stop_event):
         
         x[:, :] = output_.copy() # for tflite model
         
-        inf_time_list.append(time.time())
-        inf_time_arr = np.array(inf_time_list)
-        np.save(os.path.join(os.path.dirname(__file__), 'log', 'inf_time_lateral'), inf_time_arr)
+        # inf_time_list.append(time.time())
+        # inf_time_arr = np.array(inf_time_list)
+        # np.save(os.path.join(os.path.dirname(__file__), 'log', 'inf_time_lateral'), inf_time_arr)
         
         prev_t = cur_t.copy()
 

@@ -1,4 +1,4 @@
-from config import configParam, can_msg_list, signal_ay, signal_steer_ang, signal_steer_spd
+from config import configParam, can_msg_list, signal_ay, signal_steer_ang, signal_steer_spd, signal_veh_spd
 from can_parser import CAN_parser
 
 class DiscriminatorCorner(object):
@@ -34,15 +34,15 @@ class DiscriminatorCorner(object):
         
         # Set CAN Parser
         self.can_msg_list = can_msg_list[vehicle_id] # KMU
-        self.signal_veh_spd = signal_steer_ang[vehicle_id]
-        self.signal_steer_ang = signal_steer_spd[vehicle_id]
+        self.signal_veh_spd = signal_veh_spd[vehicle_id]
+        self.signal_steer_ang = signal_steer_ang[vehicle_id]
         self.signal_steer_spd = signal_steer_spd[vehicle_id]
         self.signal_ay = signal_ay[vehicle_id]
         
         self.can_signal_list = [self.signal_veh_spd, self.signal_steer_ang, self.signal_steer_spd, self.signal_ay]
         
         self.can_parser = CAN_parser(
-                vehicle=vehicle,
+                vehicle_id=vehicle_id,
                 can_msg_list = self.can_msg_list,
                 )
         self.latest_signal_dic = {}
@@ -119,7 +119,7 @@ class DiscriminatorCorner(object):
             
             if len(self.latest_signal_dic.keys()) < len(self.can_signal_list):
                 continue
-            
+
             self.discriminate()
 
             

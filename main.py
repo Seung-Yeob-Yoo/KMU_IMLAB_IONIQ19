@@ -7,7 +7,7 @@ import time
 from discriminator import run_discriminator
 from generator import stack_can, generate_input
 from inference import inference_roll, inference_lateral
-from communication import data_send
+from communication import datasend
 
 def main(vehicle_id, com_id):
     procs = []
@@ -149,7 +149,7 @@ def main(vehicle_id, com_id):
             },
         'DataSend' : 
             {
-            'target': data_send,
+            'target': datasend,
             'args' : (flag_info, roll_info, lateral_info, com_id, stop_event)
             }
         }

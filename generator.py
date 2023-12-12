@@ -1,5 +1,5 @@
 from can_parser import CAN_parser
-from time import time
+import time
 from config import configParam, can_msg_list, signal_ay, signal_steer_spd, signal_veh_spd, StrGearRatio, CONVERSION_FACTOR
 
 class Update_CAN(object):

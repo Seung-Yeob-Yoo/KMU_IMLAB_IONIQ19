@@ -38,7 +38,7 @@ def datasend(flag_info, roll_info, lateral_info, com_id, stop_event):
             break
         
         if com_id == 0:
-            data_to_send = np.array([flag[0], roll[0][0], roll[0][1], lat[0][0], lat[0][1]]).tobytes()
+            data_to_send = np.array([roll[0][0], roll[0][1], lat[0][0], lat[0][1]]).tobytes()
             jet_tx.write(data_to_send)
         elif com_id == 1:
             data = f'str,{roll[0][0]},{roll[0][1]},{lat[0][0]},{lat[0][1]},end,'
